@@ -164,6 +164,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .btn:active{opacity:.7}
 .btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn.sm{padding:6px 11px;font-size:11px}
+.btn.sm.active{background:var(--accent);color:#000;border-color:var(--accent)}
 .btn.danger{background:var(--red);color:#fff}
 
 /* ── Food ── */
@@ -365,34 +366,118 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- WEIGHT -->
 <div id="page-weight" class="page">
   <h2>Weight Tracker</h2>
-  <div class="alert">📌 Weigh every morning on empty stomach. Target: under 100 kg by August 31, 2026.</div>
-  <div class="grid-2" style="margin-bottom:14px">
+  <div class="alert">📌 Weigh every morning on empty stomach.</div>
+
+  <!-- Stats row -->
+  <div class="grid-2" style="margin-bottom:12px">
     <div class="stat-card"><div class="stat-label">Current Weight</div><div class="stat-value" id="currentWeight">— kg</div><div class="stat-sub" id="weightSub">Not logged yet</div></div>
-    <div class="stat-card"><div class="stat-label">To Goal (100 kg)</div><div class="stat-value" id="toGoal">—</div><div class="stat-sub">By Aug 31, 2026</div></div>
+    <div class="stat-card"><div class="stat-label" id="goalLabel">To Milestone</div><div class="stat-value" id="toGoal">—</div><div class="stat-sub" id="goalDeadlineSub"></div></div>
   </div>
+
+  <!-- Active milestone progress bar -->
   <div class="card" id="goalBarCard" style="display:none">
-    <h3>Progress to Goal</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 style="margin:0" id="milestoneTitle">Current Milestone</h3>
+      <span id="milestoneBadge" style="font-size:10px;color:var(--muted)"></span>
+    </div>
     <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
-      <span id="startWeightLabel">Start</span><span>Goal: 100 kg</span>
+      <span id="startWeightLabel">Start</span><span id="goalWeightLabel">Goal</span>
     </div>
     <div class="goal-bar"><div class="goal-bar-fill" id="goalBarFill" style="width:0%"></div></div>
     <div style="font-size:10px;color:var(--muted);margin-top:5px" id="weeklyTarget"></div>
   </div>
+
+  <!-- Milestone achieved banner -->
+  <div id="milestoneAchievedBanner" style="display:none;background:rgba(200,241,53,.1);border:1px solid rgba(200,241,53,.4);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
+    <div style="font-size:28px;margin-bottom:4px">🏆</div>
+    <div style="font-weight:700;color:var(--accent);font-size:14px" id="bannerText"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px" id="bannerSub"></div>
+    <button class="btn" style="margin-top:10px;font-size:11px" onclick="openMilestoneModal()">Set Next Milestone</button>
+  </div>
+
+  <!-- Weight graph -->
+  <div class="card" id="weightGraphCard" style="display:none;padding:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+      <h3 style="margin:0">Weekly Progress</h3>
+      <div style="display:flex;gap:5px">
+        <button class="btn sm secondary" id="graphBtn4w" onclick="setGraphRange(4,this)">4W</button>
+        <button class="btn sm secondary" id="graphBtn8w" onclick="setGraphRange(8,this)">8W</button>
+        <button class="btn sm active" id="graphBtnAll" onclick="setGraphRange(0,this)">All</button>
+      </div>
+    </div>
+    <canvas id="weightChart" style="width:100%;height:180px;display:block"></canvas>
+    <div style="display:flex;gap:14px;margin-top:8px;font-size:10px;color:var(--muted);flex-wrap:wrap">
+      <span>— <span style="color:var(--accent)">■</span> Weight</span>
+      <span>— <span style="color:var(--red)">--</span> Goal line</span>
+    </div>
+  </div>
+
+  <!-- Log weight -->
   <div class="card">
     <h3>Log Weight</h3>
     <div class="form-row">
-      <input type="number" id="weightInput" placeholder="Morning weight in kg (e.g. 108.5)" step="0.1">
+      <input type="number" id="weightInput" placeholder="Morning weight in kg (e.g. 108.5)" step="0.1" inputmode="decimal">
       <button class="btn" onclick="logWeight()">Log</button>
     </div>
   </div>
+
+  <!-- Auto-adjusted nutrition -->
+  <div class="card" id="nutritionAdjCard" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <h3 style="margin:0">Adjusted Nutrition Targets</h3>
+      <span style="font-size:9px;background:rgba(200,241,53,.12);color:var(--accent);padding:2px 7px;border-radius:20px;font-weight:700">AUTO</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Targets recalculate as you lose weight. Lighter body = lower TDEE.</div>
+    <div class="grid-3">
+      <div style="text-align:center;background:var(--surface2);border-radius:9px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Calories</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent2)" id="adjCals">2200</div>
+        <div style="font-size:9px;color:var(--muted)" id="adjCalsDiff"></div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:9px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Protein</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent)" id="adjProt">180g</div>
+        <div style="font-size:9px;color:var(--muted)">stays same</div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:9px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px">Carbs</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent2)" id="adjCarbs">200g</div>
+        <div style="font-size:9px;color:var(--muted)" id="adjCarbsDiff"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Complete weight log -->
   <div class="complete-section">
     <h3>Complete Weight Log</h3>
     <div class="complete-checklist" id="weightChecklist"></div>
     <button class="complete-btn not-ready" id="weightCompleteBtn" onclick="completeWeightLog()">Mark Weight Logged for Today</button>
   </div>
+
   <h3 style="margin-top:4px">History</h3>
   <div id="weightHistory"><div class="loading">Loading...</div></div>
+</div>
+
+<!-- Milestone modal -->
+<div class="modal-overlay" id="milestoneModal">
+  <div class="modal">
+    <h3>🎯 Set Next Milestone</h3>
+    <p>You crushed your last goal! Set your next target weight and deadline to keep the momentum going.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <div>
+        <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:5px">Target Weight (kg)</label>
+        <input type="number" id="newMilestoneWeight" placeholder="e.g. 95" step="0.5" inputmode="decimal">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:5px">Target Date</label>
+        <input type="date" id="newMilestoneDate">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="saveMilestone()">Set Milestone</button>
+      <button class="btn secondary" onclick="closeMilestoneModal()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- JUNK -->
@@ -544,21 +629,21 @@ const START_W = {
 // ─── State ────────────────────────────────────────────────────────────────
 const DEFAULT_STATE = {
   weekNum: 1, cycleNum: 1,
-  routineStarted: false,     // true after first non-rest workout logged
-  routineStartDate: null,    // ISO date string
-  // dayOverrides: { 'YYYY-MM-DD': 'rest' | workoutKey | 'forced_gym' }
+  routineStarted: false,
+  routineStartDate: null,
   dayOverrides: {},
-  // cascadeShifts: { 'YYYY-MM-DD': workoutKey } — workouts shifted to this date
   cascadeShifts: {},
-  // weekOverrides: { 'YYYY-MM-DD': weekNum } — per-day PO week override (for resets)
   weekOverrides: {},
   sessionData: {},
   exWeights: {},
   weights_log: [], meals: [],
   cleanDays: {}, streak: 0,
   notes: [], junkNotes: [],
-  // completedLogs: { 'YYYY-MM-DD': { workout, food, weight, junk, notes } }
-  completedLogs: {}
+  completedLogs: {},
+  milestones: [{ weight: 100, date: '2026-08-31', achieved: false, achievedDate: null }],
+  activeMilestoneIdx: 0,
+  startWeight: null,
+  graphRange: 0
 };
 
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -572,6 +657,9 @@ function loadState() {
     if (raw) state = { ...DEFAULT_STATE, ...JSON.parse(raw) };
   } catch(e) {}
   if (!state.exWeights || !Object.keys(state.exWeights).length) state.exWeights = { ...START_W };
+  if (!state.milestones || !state.milestones.length) state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
+  if (state.activeMilestoneIdx === undefined) state.activeMilestoneIdx = 0;
+  if (!state.startWeight && state.weights_log.length) state.startWeight = [...state.weights_log].sort((a,b)=>a.date.localeCompare(b.date))[0].val;
 }
 
 let _saveTimer = null;
@@ -1089,12 +1177,16 @@ function renderFoodLog() {
 function logWeight() {
   const v = parseFloat(document.getElementById('weightInput').value);
   if (!v||v<40||v>300) { alert('Enter a valid weight in kg'); return; }
+  if (!state.startWeight) state.startWeight = v;
   state.weights_log = state.weights_log.filter(w=>w.date!==todayStr());
   state.weights_log.push({date:todayStr(), val:v});
   state.weights_log.sort((a,b)=>a.date.localeCompare(b.date));
+  checkMilestoneAchieved(v);
+  updateDynamicTargets(v);
   save(); document.getElementById('weightInput').value='';
   renderWeightLog(); showToast('⚖️ Weight logged!');
 }
+
 function deleteWeight(date) { state.weights_log=state.weights_log.filter(w=>w.date!==date); save(); renderWeightLog(); }
 
 function completeWeightLog() {
@@ -1105,21 +1197,282 @@ function completeWeightLog() {
   save(); renderWeightLog(); showToast('⚖️ Weight log confirmed!');
 }
 
+// ── Dynamic calorie targets based on current weight ──────────────────────
+function updateDynamicTargets(currentKg) {
+  const startKg = state.startWeight || currentKg;
+  const kgLost = Math.max(0, startKg - currentKg);
+  const reduction = Math.floor(kgLost / 5) * 100; // -100 kcal per 5kg lost
+  TARGETS.cals = Math.max(1700, 2200 - reduction);
+  TARGETS.carbs = Math.max(130, 200 - Math.floor(reduction / 10));
+  // Protein stays constant
+}
+
+// ── Milestone logic ───────────────────────────────────────────────────────
+function checkMilestoneAchieved(currentKg) {
+  if (!state.milestones) state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
+  const idx = state.activeMilestoneIdx || 0;
+  const m = state.milestones[idx];
+  if (m && !m.achieved && currentKg <= m.weight) {
+    m.achieved = true;
+    m.achievedDate = todayStr();
+    save();
+  }
+}
+
+function openMilestoneModal() {
+  const m = document.getElementById('milestoneModal');
+  // Pre-fill next logical milestone
+  const cur = state.milestones[state.activeMilestoneIdx];
+  const nextW = cur ? Math.max(50, cur.weight - 5) : 95;
+  document.getElementById('newMilestoneWeight').value = nextW;
+  // Default 8 weeks from now
+  const d = new Date(); d.setDate(d.getDate()+56);
+  document.getElementById('newMilestoneDate').value = d.toISOString().split('T')[0];
+  m.classList.add('show');
+}
+
+function closeMilestoneModal() { document.getElementById('milestoneModal').classList.remove('show'); }
+
+function saveMilestone() {
+  const w = parseFloat(document.getElementById('newMilestoneWeight').value);
+  const d = document.getElementById('newMilestoneDate').value;
+  if (!w || w<30 || w>300) { showToast('Enter a valid target weight', 'orange'); return; }
+  if (!d) { showToast('Pick a target date', 'orange'); return; }
+  if (!state.milestones) state.milestones = [];
+  state.milestones.push({ weight:w, date:d, achieved:false, achievedDate:null });
+  state.activeMilestoneIdx = state.milestones.length - 1;
+  closeMilestoneModal();
+  save(); renderWeightLog();
+  showToast(`🎯 New milestone set: ${w} kg by ${fmtDate(d)}`);
+}
+
+// ── Graph ─────────────────────────────────────────────────────────────────
+let graphRange = 0; // 0 = all, 4 = 4 weeks, 8 = 8 weeks
+
+function setGraphRange(weeks, btn) {
+  graphRange = weeks;
+  document.querySelectorAll('[id^=graphBtn]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  drawWeightChart();
+}
+
+function drawWeightChart() {
+  const canvas = document.getElementById('weightChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 180 * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = '180px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 180;
+  ctx.clearRect(0, 0, W, H);
+
+  // Get data
+  let data = [...state.weights_log].sort((a,b)=>a.date.localeCompare(b.date));
+
+  // Group by week (use the last reading per week)
+  const weekMap = {};
+  data.forEach(d => {
+    const dt = new Date(d.date+'T00:00:00');
+    dt.setDate(dt.getDate() - dt.getDay()); // start of week
+    const wk = dt.toISOString().split('T')[0];
+    weekMap[wk] = d.val;
+  });
+  let weekData = Object.entries(weekMap).sort((a,b)=>a[0].localeCompare(b[0]));
+
+  // Apply range filter
+  if (graphRange > 0) {
+    weekData = weekData.slice(-graphRange);
+  }
+
+  if (weekData.length < 1) {
+    ctx.fillStyle = '#666676';
+    ctx.font = '12px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Log at least one week of data to see the chart', W/2, H/2);
+    return;
+  }
+
+  const PAD = { t:10, r:10, b:30, l:44 };
+  const cW = W - PAD.l - PAD.r;
+  const cH = H - PAD.t - PAD.b;
+
+  // Y range
+  const vals = weekData.map(d=>d[1]);
+  const activeM = state.milestones?.[state.activeMilestoneIdx];
+  if (activeM) vals.push(activeM.weight);
+  const yMin = Math.floor(Math.min(...vals) - 2);
+  const yMax = Math.ceil(Math.max(...vals) + 2);
+  const yRange = yMax - yMin;
+
+  function xp(i) { return PAD.l + (weekData.length === 1 ? cW/2 : (i/(weekData.length-1))*cW); }
+  function yp(v) { return PAD.t + cH - ((v-yMin)/yRange)*cH; }
+
+  // Grid lines
+  const gridLines = 4;
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i=0; i<=gridLines; i++) {
+    const y = PAD.t + (i/gridLines)*cH;
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W-PAD.r, y); ctx.stroke();
+    const val = yMax - (i/gridLines)*yRange;
+    ctx.fillStyle = '#666676';
+    ctx.font = '9px DM Sans, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(1), PAD.l-5, y+3);
+  }
+
+  // Goal/milestone line
+  if (activeM) {
+    const gy = yp(activeM.weight);
+    ctx.strokeStyle = 'rgba(241,53,53,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(PAD.l, gy); ctx.lineTo(W-PAD.r, gy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(241,53,53,0.7)';
+    ctx.font = 'bold 9px DM Sans, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(activeM.weight+' kg', PAD.l+3, gy-3);
+  }
+
+  // Area fill under line
+  if (weekData.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(xp(0), yp(weekData[0][1]));
+    weekData.forEach((d,i) => { if(i>0) ctx.lineTo(xp(i), yp(d[1])); });
+    ctx.lineTo(xp(weekData.length-1), H-PAD.b);
+    ctx.lineTo(xp(0), H-PAD.b);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, PAD.t, 0, H-PAD.b);
+    grad.addColorStop(0, 'rgba(200,241,53,0.18)');
+    grad.addColorStop(1, 'rgba(200,241,53,0.01)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  // Line
+  ctx.strokeStyle = '#c8f135';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  weekData.forEach((d,i) => { i===0 ? ctx.moveTo(xp(i),yp(d[1])) : ctx.lineTo(xp(i),yp(d[1])); });
+  ctx.stroke();
+
+  // Dots
+  weekData.forEach((d,i) => {
+    ctx.beginPath();
+    ctx.arc(xp(i), yp(d[1]), 4, 0, Math.PI*2);
+    ctx.fillStyle = '#c8f135';
+    ctx.fill();
+    ctx.strokeStyle = '#0d0d0f';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // X labels (show every other if crowded)
+  const step = weekData.length > 8 ? Math.ceil(weekData.length/6) : 1;
+  weekData.forEach((d,i) => {
+    if (i % step !== 0 && i !== weekData.length-1) return;
+    const dt = new Date(d[0]+'T00:00:00');
+    const lbl = dt.toLocaleDateString('en',{month:'short',day:'numeric'});
+    ctx.fillStyle = '#666676';
+    ctx.font = '8px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, xp(i), H-PAD.b+12);
+  });
+
+  // Value labels on dots
+  weekData.forEach((d,i) => {
+    ctx.fillStyle = '#e8e8ee';
+    ctx.font = 'bold 9px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d[1].toFixed(1), xp(i), yp(d[1])-9);
+  });
+}
+
 function renderWeightLog() {
   const s = [...state.weights_log].sort((a,b)=>b.date.localeCompare(a.date));
-  const l = s[0];
-  if (l) {
-    document.getElementById('currentWeight').textContent = l.val+' kg';
-    document.getElementById('toGoal').textContent = l.val>100?(l.val-100).toFixed(1)+' kg':'🎯 Goal!';
-    document.getElementById('weightSub').textContent = 'Logged '+fmtDate(l.date);
-    const sw = state.weights_log[0]?.val||l.val;
-    const pct = Math.min(100,Math.round((sw-l.val)/Math.max(1,sw-100)*100));
-    document.getElementById('goalBarCard').style.display='block';
-    document.getElementById('goalBarFill').style.width=pct+'%';
-    document.getElementById('startWeightLabel').textContent=sw+' kg (start)';
-    const wl=Math.max(1,Math.round((new Date('2026-08-31')-new Date())/604800000));
-    const kl=Math.max(0,l.val-100);
-    document.getElementById('weeklyTarget').textContent=kl>0?`${kl.toFixed(1)} kg left · ${wl} weeks · ~${(kl/wl).toFixed(2)} kg/week`:'🎉 Goal reached!';
+  const latest = s[0];
+
+  // Active milestone
+  if (!state.milestones || !state.milestones.length) {
+    state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
+  }
+  const idx = state.activeMilestoneIdx || 0;
+  const milestone = state.milestones[idx];
+
+  // Stats
+  if (latest) {
+    document.getElementById('currentWeight').textContent = latest.val+' kg';
+    document.getElementById('weightSub').textContent = 'Logged '+fmtDate(latest.date);
+    updateDynamicTargets(latest.val);
+
+    // Milestone stats
+    if (milestone) {
+      const diff = latest.val - milestone.weight;
+      document.getElementById('goalLabel').textContent = milestone.achieved ? 'Milestone ✅' : 'To Milestone';
+      document.getElementById('toGoal').textContent = milestone.achieved ? milestone.weight+' kg' : diff>0 ? diff.toFixed(1)+' kg' : '🎯';
+      document.getElementById('goalDeadlineSub').textContent = 'By '+fmtDate(milestone.date);
+    }
+
+    // Goal bar
+    const sw = state.startWeight || state.weights_log[0]?.val || latest.val;
+    if (milestone) {
+      const pct = Math.min(100, Math.max(0, Math.round((sw-latest.val)/Math.max(0.1,sw-milestone.weight)*100)));
+      document.getElementById('goalBarCard').style.display = 'block';
+      document.getElementById('goalBarFill').style.width = pct+'%';
+      document.getElementById('startWeightLabel').textContent = sw.toFixed(1)+' kg';
+      document.getElementById('goalWeightLabel').textContent = milestone.weight+' kg 🎯';
+      document.getElementById('milestoneTitle').textContent = `Milestone ${idx+1}: ${milestone.weight} kg`;
+      document.getElementById('milestoneBadge').textContent = `${idx+1} of ${state.milestones.length}`;
+      const wl = Math.max(1, Math.round((new Date(milestone.date)-new Date())/604800000));
+      const kl = Math.max(0, latest.val-milestone.weight);
+      document.getElementById('weeklyTarget').textContent = milestone.achieved
+        ? '🏆 Milestone achieved on '+fmtDate(milestone.achievedDate)
+        : kl>0 ? `${kl.toFixed(1)} kg left · ${wl} weeks · ~${(kl/wl).toFixed(2)} kg/week needed` : '🎯 So close!';
+    }
+
+    // Milestone achieved banner
+    const banner = document.getElementById('milestoneAchievedBanner');
+    if (milestone?.achieved) {
+      banner.style.display = 'block';
+      document.getElementById('bannerText').textContent = `🏆 You hit ${milestone.weight} kg!`;
+      const nextM = state.milestones[idx+1];
+      document.getElementById('bannerSub').textContent = nextM
+        ? `Next: ${nextM.weight} kg by ${fmtDate(nextM.date)}`
+        : 'Set your next milestone to keep going!';
+    } else {
+      banner.style.display = 'none';
+    }
+
+    // Nutrition adjustment card
+    const adjCard = document.getElementById('nutritionAdjCard');
+    const kgLost = Math.max(0, sw - latest.val);
+    if (kgLost >= 5) {
+      adjCard.style.display = 'block';
+      const reduction = Math.floor(kgLost/5)*100;
+      document.getElementById('adjCals').textContent = TARGETS.cals;
+      document.getElementById('adjCalsDiff').textContent = `-${reduction} from start`;
+      document.getElementById('adjProt').textContent = '180g';
+      document.getElementById('adjCarbs').textContent = TARGETS.carbs+'g';
+      document.getElementById('adjCarbsDiff').textContent = `-${Math.floor(reduction/10)}g from start`;
+    } else {
+      adjCard.style.display = 'none';
+    }
+  }
+
+  // Graph
+  const graphCard = document.getElementById('weightGraphCard');
+  if (state.weights_log.length >= 1) {
+    graphCard.style.display = 'block';
+    requestAnimationFrame(drawWeightChart);
+  } else {
+    graphCard.style.display = 'none';
   }
 
   // Complete section
@@ -1132,6 +1485,7 @@ function renderWeightLog() {
   btn.textContent = alreadyDone?'✅ Weight Logged for Today':todayLogged?'✅ Confirm Weight Log':'Log your weight first';
   btn.onclick = alreadyDone||!todayLogged ? null : completeWeightLog;
 
+  // History
   const h = document.getElementById('weightHistory');
   if (!s.length) { h.innerHTML='<div style="color:var(--muted);font-size:12px">Log tomorrow morning on empty stomach.</div>'; return; }
   h.innerHTML = s.map((w,i)=>{
@@ -1146,6 +1500,12 @@ function renderWeightLog() {
     </div>`;
   }).join('');
 }
+
+// Redraw chart on resize
+window.addEventListener('resize', () => {
+  if (document.getElementById('page-weight').classList.contains('active')) drawWeightChart();
+});
+
 
 // ─── Junk tracker ──────────────────────────────────────────────────────────
 function markDay(st) { state.cleanDays[todayStr()]=st; computeStreak(); save(); renderJunkPage(); }
