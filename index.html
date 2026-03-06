@@ -547,13 +547,13 @@ const TARGETS = { cals: 2200, protein: 180, carbs: 200 };
 
 // Base schedule (DOW → workout type)
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'REST',        type:'rest',    workoutKey:'rest'},
-  1:{name:'Mon',label:'PUSH + Core', type:'workout', workoutKey:'push'},
-  2:{name:'Tue',label:'PULL',        type:'workout', workoutKey:'pull'},
-  3:{name:'Wed',label:'HAM + Core',  type:'workout', workoutKey:'legs_ham'},
-  4:{name:'Thu',label:'REST',        type:'rest',    workoutKey:'rest'},
-  5:{name:'Fri',label:'UPPER + Core',type:'workout', workoutKey:'upper'},
-  6:{name:'Sat',label:'LEGS Quad',   type:'workout', workoutKey:'legs_quad'}
+  0:{name:'Sun',label:'PUSH + Core', type:'workout', workoutKey:'push'},
+  1:{name:'Mon',label:'PULL',        type:'workout', workoutKey:'pull'},
+  2:{name:'Tue',label:'HAM + Core',  type:'workout', workoutKey:'legs_ham'},
+  3:{name:'Wed',label:'REST',        type:'rest',    workoutKey:'rest'},
+  4:{name:'Thu',label:'UPPER + Core',type:'workout', workoutKey:'upper'},
+  5:{name:'Fri',label:'LEGS Quad',   type:'workout', workoutKey:'legs_quad'},
+  6:{name:'Sat',label:'REST',        type:'rest',    workoutKey:'rest'}
 };
 
 const CORE_EX = (pfx) => [
@@ -981,14 +981,14 @@ function openResetModal() {
   // Build cascade chain
   const cascade = buildCascade(dateStr, workoutToShift);
 
-  // Check if cascade hits Sunday (DOW 0) — the new complete rest day
-  const hitsSun = cascade.some(c => dowOfDate(c.to) === 0);
+  // Check if cascade hits Saturday (DOW 6) — the new complete rest day
+  const hitsSun = cascade.some(c => dowOfDate(c.to) === 6);
 
   if (hitsSun) {
-    const sunEntry = cascade.find(c => dowOfDate(c.to) === 0);
+    const sunEntry = cascade.find(c => dowOfDate(c.to) === 6);
     pendingSatForce = { dateStr, workoutToShift, cascade };
     document.getElementById('satModalDesc').textContent =
-      `The cascade from today's reset pushes "${WORKOUT_DEFS[sunEntry.workoutKey]?.name.split('—')[0].trim()}" onto Sunday — your complete rest day. Do you want to force gym on Sunday and shift everything by 1 day?`;
+      `The cascade from today's reset pushes "${WORKOUT_DEFS[sunEntry.workoutKey]?.name.split('—')[0].trim()}" onto Saturday — your complete rest day. Do you want to force gym on Saturday and shift everything by 1 day?`;
     document.getElementById('satModal').classList.add('show');
     return;
   }
@@ -1035,8 +1035,8 @@ function buildCascade(fromDate, workoutKey) {
       break;
     }
 
-    // Stop if we've hit Sunday (DOW 0) — caller handles the warning
-    if (nextDow === 0) break;
+    // Stop if we've hit Saturday (DOW 6) — caller handles the warning
+    if (nextDow === 6) break;
   }
   return chain;
 }
