@@ -317,49 +317,71 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- FOOD -->
 <div id="page-food" class="page">
   <h2>Food Log</h2>
-  <div class="alert" id="foodAlert">🎯 Log your morning weight so I can set your exact targets.</div>
-  <div class="grid-3" style="margin-bottom:14px">
-    <div class="stat-card"><div class="stat-label">Calories</div><div class="stat-value" id="totalCals">0</div><div class="stat-sub" id="calsSubtext">Target: ~2,200 kcal</div></div>
-    <div class="stat-card"><div class="stat-label">Protein</div><div class="stat-value" id="totalProtein" style="font-size:28px">0g</div><div class="stat-sub" id="protSubtext">Target: ~180g</div></div>
-    <div class="stat-card"><div class="stat-label">Carbs</div><div class="stat-value" id="totalCarbs" style="font-size:28px">0g</div><div class="stat-sub">Target: ~200g</div></div>
+
+  <!-- Day navigator -->
+  <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:10px 14px;margin-bottom:12px">
+    <button class="btn secondary sm" onclick="foodNavDay(-1)">‹ Prev</button>
+    <div style="text-align:center">
+      <div style="font-weight:700;font-size:13px" id="foodDayLabel">Today</div>
+      <div style="font-size:10px;color:var(--muted)" id="foodDayDate"></div>
+    </div>
+    <button class="btn secondary sm" id="foodNextBtn" onclick="foodNavDay(1)">Next ›</button>
   </div>
+
+  <!-- Daily stats -->
+  <div class="grid-3" style="margin-bottom:14px">
+    <div class="stat-card"><div class="stat-label">Calories</div><div class="stat-value" id="totalCals">0</div><div class="stat-sub" id="calsSubtext">Target: ~1,610 kcal</div></div>
+    <div class="stat-card"><div class="stat-label">Protein</div><div class="stat-value" id="totalProtein" style="font-size:28px">0g</div><div class="stat-sub" id="protSubtext">Target: ~144g</div></div>
+    <div class="stat-card"><div class="stat-label">Carbs</div><div class="stat-value" id="totalCarbs" style="font-size:28px">0g</div><div class="stat-sub">Target: ~163g</div></div>
+  </div>
+
   <!-- Target progress bars -->
   <div class="card" id="targetBars" style="padding:12px 14px">
     <h3>Daily Targets</h3>
     <div class="target-bar-wrap">
-      <div class="target-bar-label"><span>Calories</span><span id="calBarLabel">0 / 2200 kcal</span></div>
+      <div class="target-bar-label"><span>Calories</span><span id="calBarLabel">0 / 1610 kcal</span></div>
       <div class="target-bar"><div class="target-bar-fill cals" id="calBarFill" style="width:0%"></div></div>
     </div>
     <div class="target-bar-wrap" style="margin-top:8px">
-      <div class="target-bar-label"><span>Protein</span><span id="protBarLabel">0 / 180g</span></div>
+      <div class="target-bar-label"><span>Protein</span><span id="protBarLabel">0g / 144g</span></div>
       <div class="target-bar"><div class="target-bar-fill prot" id="protBarFill" style="width:0%"></div></div>
     </div>
   </div>
+
+  <!-- Weekly summary -->
+  <div class="card" id="weeklySummaryCard" style="padding:12px 14px">
+    <h3>This Week</h3>
+    <div id="weeklySummary" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <!-- Log a meal -->
   <div class="card">
-    <h3>Log a Meal</h3>
+    <h3 id="logMealTitle">Log a Meal</h3>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div class="grid-2">
         <input type="text" id="foodName" placeholder="Food / meal name">
         <select id="mealType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Pre-Workout</option><option>Post-Workout</option></select>
       </div>
       <div class="grid-3">
-        <input type="number" id="foodCals" placeholder="Calories (kcal)">
-        <input type="number" id="foodProtein" placeholder="Protein (g)">
-        <input type="number" id="foodCarbs" placeholder="Carbs (g)">
+        <input type="number" id="foodCals" placeholder="Calories (kcal)" inputmode="numeric">
+        <input type="number" id="foodProtein" placeholder="Protein (g)" inputmode="numeric">
+        <input type="number" id="foodCarbs" placeholder="Carbs (g)" inputmode="numeric">
       </div>
       <div class="form-row">
-        <input type="number" id="foodFat" placeholder="Fat (g) optional">
+        <input type="number" id="foodFat" placeholder="Fat (g) optional" inputmode="numeric">
         <button class="btn" onclick="addFood()">+ Log</button>
       </div>
     </div>
   </div>
-  <h3>Today's Meals</h3>
+
+  <h3 id="mealsListTitle" style="margin-top:4px">Today's Meals</h3>
   <div id="mealList"><div class="loading">Loading...</div></div>
+
   <!-- Complete food log -->
   <div class="complete-section">
     <h3>Complete Food Log</h3>
     <div class="complete-checklist" id="foodChecklist"></div>
-    <button class="complete-btn not-ready" id="foodCompleteBtn" onclick="completeFoodLog()">Mark Food Log Complete for Today</button>
+    <button class="complete-btn ready" id="foodCompleteBtn" onclick="completeFoodLog()">✅ Mark Food Log Complete</button>
   </div>
 </div>
 
@@ -543,7 +565,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────
 const STORE_KEY = 'coach-fitness-v2';
-const TARGETS = { cals: 2200, protein: 180, carbs: 200 };
+const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type)
 const BASE_SCHEDULE = {
@@ -557,15 +579,13 @@ const BASE_SCHEDULE = {
 };
 
 const CORE_EX = (pfx) => [
-  {id:pfx+'_plank',   name:'Plank',           type:'core', core:true, sets:3, reps:[null,null,null], note:'30–45 sec hold'},
-  {id:pfx+'_deadbug', name:'Dead Bug',         type:'core', core:true, sets:3, reps:[10,10,10],      note:'each side'},
-  {id:pfx+'_bicycle', name:'Bicycle Crunches', type:'core', core:true, sets:3, reps:[20,20,20]},
+  {id:pfx+'_core', name:'Core', type:'core', core:true, sets:1, reps:[null], note:'Follow your YouTube routine'},
 ];
 
 const WORKOUT_DEFS = {
   push:{name:'Push Day — Chest · Shoulders · Triceps · Core', exercises:[
-    {id:'p_bench',    name:'DB Flat Bench Press',       type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_incline',  name:'DB Incline Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_pecdeck',  name:'Pec Deck',                  type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_shpress',  name:'DB Shoulder Press',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_lateral',  name:'Lateral Raises',            type:'isolation', sets:3, reps:[10,12,15]},
@@ -581,6 +601,7 @@ const WORKOUT_DEFS = {
     {id:'pu_incurl', name:'Seated Incline Curl',   type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
     {id:'pu_hammer', name:'Hammer Curl',           type:'isolation', sets:3, reps:[12,13,15]},
     {id:'pu_cable',  name:'Cable Bar Curl',        type:'isolation', sets:3, reps:[10,12,15]},
+    {id:'pu_preach', name:'Preacher Curl',           type:'isolation', sets:3, reps:[10,12,15], note:'Short head bicep'},
   ]},
   legs_ham:{name:'Legs — Hamstring Focus · Core', exercises:[
     {id:'h_curl',   name:'Lying Hamstring Curl',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
@@ -596,9 +617,9 @@ const WORKOUT_DEFS = {
     {id:'c_stretch', name:'🧘 Light Stretch',          type:'cardio', sets:1, reps:[null], note:'5–10 min optional'},
   ]},
   upper:{name:'Upper Body — Chest · Shoulders · Back · Arms · Core', exercises:[
-    {id:'u_bench',    name:'DB Flat Chest Press',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_bench',    name:'Barbell Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'u_shpress',  name:'DB Shoulder Press',     type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_incline',  name:'Incline DB Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_incline',  name:'Incline Bench Press',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'u_pecdeck',  name:'Pec Deck or DB Fly',    type:'isolation', sets:3, reps:[12,13,15]},
     {id:'u_lowrow',   name:'Single Arm Low Row',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'u_lateral',  name:'Lateral Raises',        type:'isolation', sets:3, reps:[12,13,15]},
@@ -620,7 +641,7 @@ const WORKOUT_DEFS = {
 
 const START_W = {
   p_bench:25,p_incline:25,p_pecdeck:90,p_shpress:25,p_lateral:12,p_pushdown:35,p_ohe:30,
-  pu_lat:85,pu_row:25,pu_lowrow:85,pu_rdelt:12.5,pu_incurl:22.5,pu_hammer:22.5,pu_cable:25,
+  pu_lat:85,pu_row:25,pu_lowrow:85,pu_rdelt:12.5,pu_incurl:22.5,pu_hammer:22.5,pu_cable:25,pu_preach:20,
   h_curl:95,h_rdl:25,h_press:85,h_adduct:145,h_ext:90,h_calf:90,
   u_bench:27.5,u_shpress:27.5,u_incline:27.5,u_pecdeck:95,u_lowrow:90,u_lateral:15,u_bisup:22.5,u_pushdown:40,
   q_ext:90,q_squat:22.5,q_press:80,q_lunges:15,q_calf:90,
@@ -643,7 +664,9 @@ const DEFAULT_STATE = {
   milestones: [{ weight: 100, date: '2026-08-31', achieved: false, achievedDate: null }],
   activeMilestoneIdx: 0,
   startWeight: null,
-  graphRange: 0
+  graphRange: 0,
+  weeklyCalAdjust: 0,
+  weeklyProtAdjust: 0
 };
 
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -1088,65 +1111,189 @@ function applyReset(dateStr, cascade) {
 }
 
 // ─── Food ─────────────────────────────────────────────────────────────────
+// ── Food day navigation ──────────────────────────────────────────────────
+let foodDayOffset = 0; // 0 = today, -1 = yesterday, etc.
+
+function foodNavDay(dir) {
+  const newOffset = foodDayOffset + dir;
+  if (newOffset > 0) return; // Can't go to future
+  foodDayOffset = newOffset;
+  renderFoodLog();
+}
+
+function getFoodDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + foodDayOffset);
+  return d.toISOString().split('T')[0];
+}
+
 function addFood() {
   const name = document.getElementById('foodName').value.trim();
   if (!name) { alert('Enter a food name'); return; }
+  const dateStr = getFoodDate();
   state.meals.push({
-    id:Date.now(), date:todayStr(), name,
-    type:document.getElementById('mealType').value,
-    cals:parseInt(document.getElementById('foodCals').value)||0,
-    protein:parseInt(document.getElementById('foodProtein').value)||0,
-    carbs:parseInt(document.getElementById('foodCarbs').value)||0,
-    fat:parseInt(document.getElementById('foodFat').value)||0
+    id: Date.now(), date: dateStr, name,
+    type: document.getElementById('mealType').value,
+    cals: parseInt(document.getElementById('foodCals').value) || 0,
+    protein: parseInt(document.getElementById('foodProtein').value) || 0,
+    carbs: parseInt(document.getElementById('foodCarbs').value) || 0,
+    fat: parseInt(document.getElementById('foodFat').value) || 0
   });
   save();
-  ['foodName','foodCals','foodProtein','foodCarbs','foodFat'].forEach(id=>document.getElementById(id).value='');
+  ['foodName','foodCals','foodProtein','foodCarbs','foodFat'].forEach(id => document.getElementById(id).value = '');
   renderFoodLog();
 }
-function deleteFood(id) { state.meals=state.meals.filter(m=>m.id!==id); save(); renderFoodLog(); }
+
+function deleteFood(id) { state.meals = state.meals.filter(m => m.id !== id); save(); renderFoodLog(); }
 
 function completeFoodLog() {
-  const t = state.meals.filter(m=>m.date===todayStr());
-  const totCals = t.reduce((a,m)=>a+m.cals,0);
-  const totProt = t.reduce((a,m)=>a+m.protein,0);
-  if (totCals < TARGETS.cals*0.8 || totProt < TARGETS.protein*0.8) {
-    showToast('Targets not met yet — keep eating!', 'orange'); return;
+  const dateStr = getFoodDate();
+  if (!state.completedLogs[dateStr]) state.completedLogs[dateStr] = {};
+  const alreadyDone = state.completedLogs[dateStr].food;
+  if (alreadyDone) {
+    // Toggle off
+    state.completedLogs[dateStr].food = false;
+    save(); renderFoodLog(); showToast('Food log unmarked', 'orange');
+    return;
   }
-  if (!state.completedLogs[todayStr()]) state.completedLogs[todayStr()] = {};
-  state.completedLogs[todayStr()].food = true;
+  state.completedLogs[dateStr].food = true;
+
+  // ── Weekly adjustment logic ──────────────────────────────────────────
+  // Count how many days this week are logged and how far off targets
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+  let totalCalsLogged = 0, totalProtLogged = 0, daysLogged = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dk = d.toISOString().split('T')[0];
+    const dayMeals = state.meals.filter(m => m.date === dk);
+    if (dayMeals.length > 0) {
+      totalCalsLogged += dayMeals.reduce((a, m) => a + m.cals, 0);
+      totalProtLogged += dayMeals.reduce((a, m) => a + m.protein, 0);
+      daysLogged++;
+    }
+  }
+  if (daysLogged >= 3) {
+    const avgCals = Math.round(totalCalsLogged / daysLogged);
+    const avgProt = Math.round(totalProtLogged / daysLogged);
+    const calDiff = avgCals - TARGETS.cals;
+    const protDiff = avgProt - TARGETS.protein;
+    // Adjust targets for next week if consistently over/under by >100 kcal or >15g
+    if (Math.abs(calDiff) > 100) {
+      state.weeklyCalAdjust = -Math.round(calDiff * 0.5); // nudge halfway
+    }
+    if (Math.abs(protDiff) > 15) {
+      state.weeklyProtAdjust = -Math.round(protDiff * 0.5);
+    }
+  }
   save(); renderFoodLog(); showToast('🥗 Food log complete!');
 }
 
+function getAdjustedTargets() {
+  return {
+    cals: Math.max(1400, TARGETS.cals + (state.weeklyCalAdjust || 0)),
+    protein: Math.max(100, TARGETS.protein + (state.weeklyProtAdjust || 0)),
+    carbs: TARGETS.carbs
+  };
+}
+
 function renderFoodLog() {
-  const t = state.meals.filter(m=>m.date===todayStr());
-  const totCals = t.reduce((a,m)=>a+m.cals,0);
-  const totProt = t.reduce((a,m)=>a+m.protein,0);
-  const totCarbs = t.reduce((a,m)=>a+m.carbs,0);
+  const dateStr = getFoodDate();
+  const isToday = foodDayOffset === 0;
+  const targets = getAdjustedTargets();
+
+  // Day navigator labels
+  const dayLabel = foodDayOffset === 0 ? 'Today' : foodDayOffset === -1 ? 'Yesterday' : `${Math.abs(foodDayOffset)} days ago`;
+  document.getElementById('foodDayLabel').textContent = dayLabel;
+  document.getElementById('foodDayDate').textContent = fmtDate(dateStr);
+  document.getElementById('foodNextBtn').style.opacity = isToday ? '0.3' : '1';
+  document.getElementById('foodNextBtn').style.pointerEvents = isToday ? 'none' : 'auto';
+  document.getElementById('logMealTitle').textContent = isToday ? 'Log a Meal' : `Log a Meal — ${fmtDate(dateStr)}`;
+  document.getElementById('mealsListTitle').textContent = isToday ? "Today's Meals" : `Meals — ${fmtDate(dateStr)}`;
+
+  // Meals for selected day
+  const t = state.meals.filter(m => m.date === dateStr);
+  const totCals = t.reduce((a, m) => a + m.cals, 0);
+  const totProt = t.reduce((a, m) => a + m.protein, 0);
+  const totCarbs = t.reduce((a, m) => a + m.carbs, 0);
 
   // Stats
   const calEl = document.getElementById('totalCals');
   const protEl = document.getElementById('totalProtein');
   calEl.textContent = totCals;
-  protEl.textContent = totProt+'g';
-  document.getElementById('totalCarbs').textContent = totCarbs+'g';
-  calEl.className = `stat-value${totCals>=TARGETS.cals?' stat-hit':''}`;
+  protEl.textContent = totProt + 'g';
+  document.getElementById('totalCarbs').textContent = totCarbs + 'g';
+  calEl.className = `stat-value${totCals >= targets.cals ? ' stat-hit' : ''}`;
+  protEl.className = `stat-value${totProt >= targets.protein ? ' stat-hit' : ''}`;
   protEl.style.fontSize = '28px';
-  protEl.className = `stat-value${totProt>=TARGETS.protein?' stat-hit':''}`;
 
   // Target bars
-  const calPct = Math.min(110, Math.round(totCals/TARGETS.cals*100));
-  const protPct = Math.min(110, Math.round(totProt/TARGETS.protein*100));
-  document.getElementById('calBarFill').style.width = calPct+'%';
-  document.getElementById('calBarFill').className = `target-bar-fill cals${calPct>100?' over':''}`;
-  document.getElementById('calBarLabel').textContent = `${totCals} / ${TARGETS.cals} kcal`;
-  document.getElementById('protBarFill').style.width = protPct+'%';
-  document.getElementById('protBarFill').className = `target-bar-fill prot${protPct>100?' over':''}`;
-  document.getElementById('protBarLabel').textContent = `${totProt}g / ${TARGETS.protein}g`;
+  const calPct = Math.min(110, Math.round(totCals / targets.cals * 100));
+  const protPct = Math.min(110, Math.round(totProt / targets.protein * 100));
+  document.getElementById('calBarFill').style.width = calPct + '%';
+  document.getElementById('calBarFill').className = `target-bar-fill cals${calPct > 100 ? ' over' : ''}`;
+  document.getElementById('calBarLabel').textContent = `${totCals} / ${targets.cals} kcal`;
+  document.getElementById('protBarFill').style.width = protPct + '%';
+  document.getElementById('protBarFill').className = `target-bar-fill prot${protPct > 100 ? ' over' : ''}`;
+  document.getElementById('protBarLabel').textContent = `${totProt}g / ${targets.protein}g`;
+  document.getElementById('calsSubtext').textContent = `Target: ${targets.cals} kcal`;
+  document.getElementById('protSubtext').textContent = `Target: ${targets.protein}g`;
+
+  // ── Weekly summary ────────────────────────────────────────────────────
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay() + 1);
+  let weekHTML = '';
+  let weekTotCals = 0, weekTotProt = 0, weekDays = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dk = d.toISOString().split('T')[0];
+    if (dk > todayStr()) continue;
+    const dayMeals = state.meals.filter(m => m.date === dk);
+    const dCals = dayMeals.reduce((a, m) => a + m.cals, 0);
+    const dProt = dayMeals.reduce((a, m) => a + m.protein, 0);
+    const isComplete = state.completedLogs[dk]?.food;
+    const isSelected = dk === dateStr;
+    if (dayMeals.length > 0) { weekTotCals += dCals; weekTotProt += dProt; weekDays++; }
+    const dayName = d.toLocaleDateString('en', { weekday: 'short' });
+    const calColor = dCals >= targets.cals ? 'var(--accent)' : dCals > 0 ? 'var(--accent2)' : 'var(--muted)';
+    weekHTML += `<div onclick="foodJumpTo('${dk}')" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;cursor:pointer;background:${isSelected ? 'var(--surface2)' : 'transparent'};border:1px solid ${isSelected ? 'var(--accent)' : 'transparent'}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;font-weight:700;color:var(--muted);width:28px">${dayName}</span>
+        <span style="font-size:11px;color:var(--text)">${fmtDate(dk)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:${calColor}">${dCals > 0 ? dCals + ' kcal' : '—'}</span>
+        <span style="font-size:11px;color:var(--accent)">${dProt > 0 ? dProt + 'g P' : '—'}</span>
+        <span style="font-size:10px">${isComplete ? '✅' : dCals > 0 ? '⏳' : '○'}</span>
+      </div>
+    </div>`;
+  }
+  if (weekDays > 0) {
+    const avgCals = Math.round(weekTotCals / weekDays);
+    const avgProt = Math.round(weekTotProt / weekDays);
+    weekHTML += `<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+      <span>Avg ${weekDays} days logged</span>
+      <span style="color:var(--accent2)">${avgCals} kcal · ${avgProt}g protein</span>
+    </div>`;
+    // Show adjustment notice if active
+    if (state.weeklyCalAdjust || state.weeklyProtAdjust) {
+      const calAdj = state.weeklyCalAdjust || 0;
+      const protAdj = state.weeklyProtAdjust || 0;
+      weekHTML += `<div style="font-size:10px;color:var(--accent);margin-top:4px">⚡ Targets auto-adjusted: ${calAdj > 0 ? '+' : ''}${calAdj} kcal · ${protAdj > 0 ? '+' : ''}${protAdj}g protein</div>`;
+    }
+  } else {
+    weekHTML = '<div style="color:var(--muted);font-size:12px">No meals logged this week yet.</div>';
+  }
+  document.getElementById('weeklySummary').innerHTML = weekHTML;
 
   // Meals list
   const l = document.getElementById('mealList');
-  if (!t.length) { l.innerHTML='<div style="color:var(--muted);font-size:12px;padding:6px">No meals logged today.</div>'; }
-  else l.innerHTML = t.map(m=>`<div class="meal-card">
+  if (!t.length) { l.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:6px">No meals logged for ${isToday ? 'today' : fmtDate(dateStr)}.</div>`; }
+  else l.innerHTML = t.map(m => `<div class="meal-card">
     <div class="meal-header">
       <div><div class="meal-name">${m.name}</div><div style="font-size:9px;color:var(--muted)">${m.type}</div></div>
       <div style="display:flex;align-items:center;gap:6px"><div class="meal-cals">${m.cals} kcal</div>
@@ -1155,23 +1302,30 @@ function renderFoodLog() {
     <div class="macro-pills"><span class="macro-pill p">P: ${m.protein}g</span><span class="macro-pill c">C: ${m.carbs}g</span><span class="macro-pill f">F: ${m.fat}g</span></div>
   </div>`).join('');
 
-  // Complete section
-  const calMet = totCals >= TARGETS.cals;
-  const protMet = totProt >= TARGETS.protein;
-  const hasMeals = t.length > 0;
-  const alreadyDone = state.completedLogs[todayStr()]?.food;
-  const ready = calMet && protMet;
-
-  document.getElementById('foodChecklist').innerHTML = `
-    <div class="complete-check-item ${hasMeals?'met-text':'unmet-text'}"><div class="dot ${hasMeals?'met':''}"></div>Meals logged today (${t.length})</div>
-    <div class="complete-check-item ${calMet?'met-text':'unmet-text'}"><div class="dot ${calMet?'met':''}"></div>Calories target: ${totCals} / ${TARGETS.cals} kcal</div>
-    <div class="complete-check-item ${protMet?'met-text':'unmet-text'}"><div class="dot ${protMet?'met':''}"></div>Protein target: ${totProt}g / ${TARGETS.protein}g</div>`;
-
+  // Complete button — always enabled, toggleable
+  const alreadyDone = state.completedLogs[dateStr]?.food;
   const btn = document.getElementById('foodCompleteBtn');
-  btn.className = `complete-btn ${alreadyDone?'already-done':ready?'ready':'not-ready'}`;
-  btn.textContent = alreadyDone ? '✅ Food Log Complete for Today' : ready ? '✅ Mark Food Log Complete' : 'Hit your calorie & protein targets first';
-  btn.onclick = alreadyDone || !ready ? null : completeFoodLog;
+  btn.className = `complete-btn ${alreadyDone ? 'already-done' : 'ready'}`;
+  btn.textContent = alreadyDone ? '✅ Food Log Complete — Tap to Undo' : '✅ Mark Food Log Complete';
+
+  // Checklist
+  const calMet = totCals >= targets.cals;
+  const protMet = totProt >= targets.protein;
+  document.getElementById('foodChecklist').innerHTML = `
+    <div class="complete-check-item ${totCals > 0 ? 'met-text' : 'unmet-text'}"><div class="dot ${totCals > 0 ? 'met' : ''}"></div>Meals logged: ${t.length} items · ${totCals} kcal</div>
+    <div class="complete-check-item ${calMet ? 'met-text' : 'unmet-text'}"><div class="dot ${calMet ? 'met' : ''}"></div>Calories: ${totCals} / ${targets.cals} kcal${calMet ? ' ✓' : ''}</div>
+    <div class="complete-check-item ${protMet ? 'met-text' : 'unmet-text'}"><div class="dot ${protMet ? 'met' : ''}"></div>Protein: ${totProt}g / ${targets.protein}g${protMet ? ' ✓' : ''}</div>`;
 }
+
+function foodJumpTo(dateStr) {
+  const today = new Date(todayStr() + 'T00:00:00');
+  const target = new Date(dateStr + 'T00:00:00');
+  const diff = Math.round((target - today) / 86400000);
+  if (diff > 0) return;
+  foodDayOffset = diff;
+  renderFoodLog();
+}
+
 
 // ─── Weight ────────────────────────────────────────────────────────────────
 function logWeight() {
