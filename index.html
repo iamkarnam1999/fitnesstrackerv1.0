@@ -569,13 +569,13 @@ const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type)
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'REST',        type:'rest',    workoutKey:'rest'},
-  1:{name:'Mon',label:'PUSH + Core', type:'workout', workoutKey:'push'},
-  2:{name:'Tue',label:'PULL',        type:'workout', workoutKey:'pull'},
-  3:{name:'Wed',label:'HAM + Core',  type:'workout', workoutKey:'legs_ham'},
-  4:{name:'Thu',label:'REST',        type:'rest',    workoutKey:'rest'},
-  5:{name:'Fri',label:'UPPER + Core',type:'workout', workoutKey:'upper'},
-  6:{name:'Sat',label:'LEGS Quad',   type:'workout', workoutKey:'legs_quad'}
+  0:{name:'Sun',label:'REST',            type:'rest',    workoutKey:'rest'},
+  1:{name:'Mon',label:'PUSH + Core',     type:'workout', workoutKey:'push'},
+  2:{name:'Tue',label:'PULL',            type:'workout', workoutKey:'pull'},
+  3:{name:'Wed',label:'HAM + Core',      type:'workout', workoutKey:'legs_ham'},
+  4:{name:'Thu',label:'REST',            type:'rest',    workoutKey:'rest'},
+  5:{name:'Fri',label:'UPPER + Core',    type:'workout', workoutKey:'upper'},
+  6:{name:'Sat',label:'LEGS Quad + Core',type:'workout', workoutKey:'legs_quad'}
 };
 
 const CORE_EX = (pfx) => [
@@ -586,7 +586,6 @@ const WORKOUT_DEFS = {
   push:{name:'Push Day — Chest · Shoulders · Triceps · Core', exercises:[
     {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_pecdeck',  name:'Pec Deck',                  type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_shpress',  name:'DB Shoulder Press',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_lateral',  name:'Lateral Raises',            type:'isolation', sets:3, reps:[10,12,15]},
     {id:'p_pushdown', name:'Rope Tricep Pushdown',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
@@ -597,7 +596,7 @@ const WORKOUT_DEFS = {
     {id:'pu_lat',    name:'Lat Pulldown',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'pu_row',    name:'DB Bent-Over Row',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'pu_lowrow', name:'Single-Arm Low Row',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'pu_rdelt',  name:'Rear Delt DB Fly',      type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'pu_facepull', name:'Rope Face Pull',       type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt + external rotators'},
     {id:'pu_incurl', name:'Seated Incline Curl',   type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
     {id:'pu_hammer', name:'Hammer Curl',           type:'isolation', sets:3, reps:[12,13,15]},
     {id:'pu_preach', name:'Preacher Curl',           type:'isolation', sets:3, reps:[10,12,15], note:'Short head bicep'},
@@ -626,12 +625,13 @@ const WORKOUT_DEFS = {
     {id:'u_pushdown', name:'Rope Tricep Pushdown',  type:'isolation', sets:3, reps:[12,13,15]},
     ...CORE_EX('u')
   ]},
-  legs_quad:{name:'Legs — Quad Focus', exercises:[
+  legs_quad:{name:'Legs Quad + Core', exercises:[
     {id:'q_ext',    name:'Leg Extensions',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'q_squat',  name:'Smith Machine Squat', type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'q_press',  name:'Leg Press',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'q_lunges', name:'Walking DB Lunges',   type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
     {id:'q_calf',   name:'Calf Raises',         type:'isolation', sets:3, reps:[12,13,15]},
+    ...CORE_EX('q')
   ]},
   rest:{name:'Complete Rest Day 😴', exercises:[
     {id:'rest_day', name:'Rest & Recover', type:'cardio', sets:1, reps:[null], note:'No gym. Eat well, hydrate, sleep.'}
@@ -640,7 +640,7 @@ const WORKOUT_DEFS = {
 
 const START_W = {
   p_bench:25,p_incline:25,p_pecdeck:90,p_shpress:25,p_lateral:12,p_pushdown:35,p_ohe:30,
-  pu_lat:85,pu_row:25,pu_lowrow:85,pu_rdelt:12.5,pu_incurl:22.5,pu_hammer:22.5,pu_preach:20,
+  pu_lat:85,pu_row:25,pu_lowrow:85,pu_facepull:30,pu_incurl:22.5,pu_hammer:22.5,pu_preach:20,
   h_curl:95,h_rdl:25,h_press:85,h_adduct:145,h_ext:90,h_calf:90,
   u_bench:27.5,u_shpress:27.5,u_incline:27.5,u_pecdeck:95,u_lowrow:90,u_lateral:15,u_bisup:22.5,u_pushdown:40,
   q_ext:90,q_squat:22.5,q_press:80,q_lunges:15,q_calf:90,
@@ -682,6 +682,7 @@ function loadState() {
   if (!state.milestones || !state.milestones.length) state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
   if (state.activeMilestoneIdx === undefined) state.activeMilestoneIdx = 0;
   if (!state.startWeight && state.weights_log.length) state.startWeight = [...state.weights_log].sort((a,b)=>a.date.localeCompare(b.date))[0].val;
+  // Week of Mar 16 handled via WEEK_HARDCODE in resolveDay()
 }
 
 let _saveTimer = null;
@@ -711,8 +712,27 @@ function showToast(msg, type='green', dur=2000) {
 
 // ─── Schedule resolution ──────────────────────────────────────────────────
 // Returns { label, type, workoutKey } for a given date string
+// ── One-off week override — Week 1 only (Mar 16–22 2026) ────────────────
+// After this week, BASE_SCHEDULE takes over permanently
+const WEEK_HARDCODE = {
+  '2026-03-16': 'rest',       // Mon — REST (missed)
+  '2026-03-17': 'push',       // Tue — Push + Core
+  '2026-03-18': 'pull',       // Wed — Pull
+  '2026-03-19': 'legs_ham',   // Thu — Ham + Core (no rest this week)
+  '2026-03-20': 'upper',      // Fri — Upper + Core
+  '2026-03-21': 'legs_quad',  // Sat — Legs Quad + Core
+  '2026-03-22': 'rest'        // Sun — REST
+};
+
 function resolveDay(dateStr) {
-  // Check cascadeShifts first
+  // Hardcoded week overrides take absolute priority
+  if (WEEK_HARDCODE[dateStr] !== undefined) {
+    const wk = WEEK_HARDCODE[dateStr];
+    if (wk === 'rest') return { label: 'REST', type: 'rest', workoutKey: 'rest' };
+    const def = WORKOUT_DEFS[wk];
+    return { label: def ? def.name.split('—')[0].trim() : wk, type: 'workout', workoutKey: wk };
+  }
+  // Check cascadeShifts
   if (state.cascadeShifts[dateStr]) {
     const wk = state.cascadeShifts[dateStr];
     const def = WORKOUT_DEFS[wk];
