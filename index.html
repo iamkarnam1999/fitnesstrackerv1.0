@@ -107,23 +107,18 @@ h3{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;le
 .chk-btn.done svg{display:block}
 
 /* ── Set row — Mobile card layout ── */
-/* .set-row-top and .set-row-bottom are mobile-only, hidden on desktop */
 .set-row-top,.set-row-bottom{display:none}
 .rep-target-chip{display:none}
 
 @media(max-width:639px){
-  /* Hide desktop header row */
   .set-row.hdr{display:none!important}
-  /* Each set becomes a card */
   .set-row{display:flex!important;flex-direction:column;padding:10px 12px;gap:8px;border-bottom:1px solid var(--border)}
   .set-row:last-child{border-bottom:none}
-  /* Hide the 5 desktop grid columns inside .set-row */
   .set-row > .set-label,
   .set-row > .rep-target,
   .set-row > div:nth-child(2),
   .set-row > div:nth-child(4),
   .set-row > div:nth-child(5){ display:none!important }
-  /* Show mobile sections */
   .set-row-top{display:flex!important;align-items:center;justify-content:space-between;width:100%;gap:8px}
   .set-row-bottom{display:flex!important;gap:8px;width:100%}
   .set-row-bottom .input-group{display:flex;flex-direction:column;gap:4px;flex:1}
@@ -269,14 +264,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <h3>⚠️ Cascade hits Sunday Rest</h3>
     <p id="satModalDesc"></p>
     <div class="modal-actions">
-      <button class="btn danger" onclick="confirmSatForce()">Force Gym on Saturday</button>
+      <button class="btn danger" onclick="confirmSatForce()">Force Gym on Sunday</button>
       <button class="btn secondary" onclick="closeSatModal()">Cancel Reset</button>
     </div>
   </div>
 </div>
 
 <header>
-  <div class="logo">COACH<span>Mon–Sat Routine · Week 1 starts Mar 9 2026</span></div>
+  <div class="logo">COACH<span>Mon–Sat Routine · Week 1 starts Mar 20 2026</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -564,18 +559,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────
-const STORE_KEY = 'coach-fitness-v2';
+const STORE_KEY = 'coach-fitness-v3';
 const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
-// Base schedule (DOW → workout type)
+// Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'REST',            type:'rest',    workoutKey:'rest'},
-  1:{name:'Mon',label:'PUSH + Core',     type:'workout', workoutKey:'push'},
-  2:{name:'Tue',label:'PULL',            type:'workout', workoutKey:'pull'},
-  3:{name:'Wed',label:'HAM + Core',      type:'workout', workoutKey:'legs_ham'},
-  4:{name:'Thu',label:'REST',            type:'rest',    workoutKey:'rest'},
-  5:{name:'Fri',label:'UPPER + Core',    type:'workout', workoutKey:'upper'},
-  6:{name:'Sat',label:'LEGS Quad + Core',type:'workout', workoutKey:'legs_quad'}
+  0:{name:'Sun',label:'REST',              type:'rest',    workoutKey:'rest'},
+  1:{name:'Mon',label:'PUSH',              type:'workout', workoutKey:'push'},
+  2:{name:'Tue',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
+  3:{name:'Wed',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
+  4:{name:'Thu',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
+  5:{name:'Fri',label:'UPPER',             type:'workout', workoutKey:'upper'},
+  6:{name:'Sat',label:'LEGS Quad + Core',  type:'workout', workoutKey:'legs_quad'}
 };
 
 const CORE_EX = (pfx) => [
@@ -583,47 +578,43 @@ const CORE_EX = (pfx) => [
 ];
 
 const WORKOUT_DEFS = {
-  push:{name:'Push Day — Chest · Shoulders · Triceps · Core', exercises:[
+  push:{name:'Push Day — Chest · Shoulders · Triceps', exercises:[
     {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_shpress',  name:'DB Shoulder Press',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_lateral',  name:'Lateral Raises',            type:'isolation', sets:3, reps:[10,12,15]},
-    {id:'p_pushdown', name:'Rope Tricep Pushdown',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_ohe',      name:'Overhead Tricep Extension', type:'isolation', sets:3, reps:[12,13,15]},
-    ...CORE_EX('p')
+    {id:'p_shpress',  name:'DB Shoulder Press',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'p_lateral',  name:'Lateral Raises',             type:'isolation', sets:3, reps:[10,12,15]},
+    {id:'p_pushdown', name:'Rope Tricep Pushdown',       type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'p_skull',    name:'DB Tricep Skullcrushers',    type:'isolation', sets:3, reps:[12,13,15]},
   ]},
-  pull:{name:'Pull Day — Back · Biceps', exercises:[
-    {id:'pu_lat',    name:'Lat Pulldown',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'pu_row',    name:'DB Bent-Over Row',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'pu_lowrow', name:'Single-Arm Low Row',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+  pull:{name:'Pull Day — Back · Biceps · Core', exercises:[
+    {id:'pu_lat',      name:'Lat Pulldown',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'pu_row',      name:'DB Bent-Over Row',     type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'pu_facepull', name:'Rope Face Pull',       type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt + external rotators'},
-    {id:'pu_incurl', name:'Seated Incline Curl',   type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
-    {id:'pu_hammer', name:'Hammer Curl',           type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'pu_preach', name:'Preacher Curl',           type:'isolation', sets:3, reps:[10,12,15], note:'Short head bicep'},
+    {id:'pu_incurl',   name:'Seated Incline Curl',  type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
+    {id:'pu_hammer',   name:'Hammer Curl',          type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'pu_preach',   name:'Preacher Curl',        type:'isolation', sets:3, reps:[10,12,15], note:'Short head bicep'},
+    ...CORE_EX('pu')
   ]},
-  legs_ham:{name:'Legs — Hamstring Focus · Core', exercises:[
-    {id:'h_curl',   name:'Lying Hamstring Curl',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'h_rdl',    name:'RDL (Dumbbells)',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'h_press',  name:'Leg Press (heels high)',  type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'h_adduct', name:'Hip Adduction',           type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'h_ext',    name:'Leg Extensions',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'h_calf',   name:'Calf Raise Machine',      type:'isolation', sets:3, reps:[12,13,15]},
-    ...CORE_EX('h')
+  legs_ham:{name:'Legs — Hamstring Focus', exercises:[
+    {id:'h_curl',    name:'Lying Hamstring Curl',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'h_rdl',     name:'RDL',                    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'h_press',   name:'Leg Press (heels high)', type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'h_glute',   name:'Barbell Glute Bridge',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'h_ext',     name:'Leg Extensions',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'h_calf',    name:'Calf Raise Machine',     type:'isolation', sets:3, reps:[12,13,15]},
   ]},
-  cardio:{name:'Active Rest — Cardio Only', exercises:[
-    {id:'c_walk',    name:'🚶 Brisk Walk / Treadmill', type:'cardio', sets:1, reps:[null], note:'25 min, brisk pace'},
-    {id:'c_stretch', name:'🧘 Light Stretch',          type:'cardio', sets:1, reps:[null], note:'5–10 min optional'},
+  cardio:{name:'Active Rest — 30 min Incline Walk + Core', exercises:[
+    {id:'c_walk',    name:'🚶 Incline Treadmill Walk', type:'cardio', sets:1, reps:[null], note:'30 min, ~5% incline, 3.0 kmph'},
+    ...CORE_EX('c')
   ]},
-  upper:{name:'Upper Body — Chest · Shoulders · Back · Arms · Core', exercises:[
+  upper:{name:'Upper Body — Chest · Shoulders · Back · Arms', exercises:[
     {id:'u_bench',    name:'Barbell Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_shpress',  name:'DB Shoulder Press',     type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_incline',  name:'Incline Bench Press',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_pecdeck',  name:'Pec Deck or DB Fly',    type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'u_lowrow',   name:'Single Arm Low Row',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_lateral',  name:'Lateral Raises',        type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'u_bisup',    name:'Biceps Superset',       type:'isolation', sets:3, reps:[12,13,15], note:'Incline+Hammer Curl'},
-    {id:'u_pushdown', name:'Rope Tricep Pushdown',  type:'isolation', sets:3, reps:[12,13,15]},
-    ...CORE_EX('u')
+    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_lateral',  name:'Lateral Raises',         type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'u_lowrow',   name:'Single Arm Low Row',     type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_bisup',    name:'Biceps Superset',        type:'isolation', sets:3, reps:[12,13,15], note:'Incline+Hammer Curl'},
+    {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
   ]},
   legs_quad:{name:'Legs Quad + Core', exercises:[
     {id:'q_ext',    name:'Leg Extensions',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
@@ -639,10 +630,10 @@ const WORKOUT_DEFS = {
 };
 
 const START_W = {
-  p_bench:25,p_incline:25,p_pecdeck:90,p_shpress:25,p_lateral:12,p_pushdown:35,p_ohe:30,
-  pu_lat:85,pu_row:25,pu_lowrow:85,pu_facepull:30,pu_incurl:22.5,pu_hammer:22.5,pu_preach:20,
-  h_curl:95,h_rdl:25,h_press:85,h_adduct:145,h_ext:90,h_calf:90,
-  u_bench:27.5,u_shpress:27.5,u_incline:27.5,u_pecdeck:95,u_lowrow:90,u_lateral:15,u_bisup:22.5,u_pushdown:40,
+  p_bench:25,p_incline:25,p_shpress:25,p_lateral:12,p_pushdown:35,p_skull:30,
+  pu_lat:85,pu_row:25,pu_facepull:30,pu_incurl:22.5,pu_hammer:22.5,pu_preach:20,
+  h_curl:95,h_rdl:25,h_press:85,h_glute:40,h_ext:90,h_calf:90,
+  u_bench:27.5,u_pecdeck:95,u_shpress:27.5,u_lowrow:90,u_lateral:15,u_bisup:22.5,u_pushdown:40,
   q_ext:90,q_squat:22.5,q_press:80,q_lunges:15,q_calf:90,
 };
 
@@ -670,7 +661,7 @@ const DEFAULT_STATE = {
 
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
 let selDow = new Date().getDay();
-let pendingSatForce = null; // stores cascade plan awaiting user confirm
+let pendingSatForce = null;
 
 // ─── Storage ──────────────────────────────────────────────────────────────
 function loadState() {
@@ -682,7 +673,6 @@ function loadState() {
   if (!state.milestones || !state.milestones.length) state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
   if (state.activeMilestoneIdx === undefined) state.activeMilestoneIdx = 0;
   if (!state.startWeight && state.weights_log.length) state.startWeight = [...state.weights_log].sort((a,b)=>a.date.localeCompare(b.date))[0].val;
-  // Week of Mar 16 handled via WEEK_HARDCODE in resolveDay()
 }
 
 let _saveTimer = null;
@@ -711,27 +701,7 @@ function showToast(msg, type='green', dur=2000) {
 }
 
 // ─── Schedule resolution ──────────────────────────────────────────────────
-// Returns { label, type, workoutKey } for a given date string
-// ── One-off week override — Week 1 only (Mar 16–22 2026) ────────────────
-// After this week, BASE_SCHEDULE takes over permanently
-const WEEK_HARDCODE = {
-  '2026-03-16': 'rest',       // Mon — REST (missed)
-  '2026-03-17': 'push',       // Tue — Push + Core
-  '2026-03-18': 'pull',       // Wed — Pull
-  '2026-03-19': 'legs_ham',   // Thu — Ham + Core (no rest this week)
-  '2026-03-20': 'upper',      // Fri — Upper + Core
-  '2026-03-21': 'legs_quad',  // Sat — Legs Quad + Core
-  '2026-03-22': 'rest'        // Sun — REST
-};
-
 function resolveDay(dateStr) {
-  // Hardcoded week overrides take absolute priority
-  if (WEEK_HARDCODE[dateStr] !== undefined) {
-    const wk = WEEK_HARDCODE[dateStr];
-    if (wk === 'rest') return { label: 'REST', type: 'rest', workoutKey: 'rest' };
-    const def = WORKOUT_DEFS[wk];
-    return { label: def ? def.name.split('—')[0].trim() : wk, type: 'workout', workoutKey: wk };
-  }
   // Check cascadeShifts
   if (state.cascadeShifts[dateStr]) {
     const wk = state.cascadeShifts[dateStr];
@@ -761,7 +731,6 @@ function showPage(p, el, bnavId) {
   const bId = bnavId || p;
   const bn = document.getElementById('bnav-'+bId);
   if (bn) bn.classList.add('active');
-  // Scroll to top on mobile page change
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -796,10 +765,8 @@ function advanceWeek() {
 // ─── Week grid ────────────────────────────────────────────────────────────
 function renderWeekGrid() {
   const grid = document.getElementById('weekGrid');
-  const todayDow_ = todayDow();
   const todayDate = todayStr();
   grid.innerHTML = '';
-  // Find the Sunday of current week
   const d = new Date(); d.setDate(d.getDate() - d.getDay());
   for (let i=0; i<7; i++) {
     const dateStr = d.toISOString().split('T')[0];
@@ -832,7 +799,6 @@ function renderWeekGrid() {
 
 // ─── Workout render ───────────────────────────────────────────────────────
 function getWeekForDate(dateStr) {
-  // Per-day override (used when Hard Reset shifts the PO week)
   if (state.weekOverrides[dateStr] !== undefined) return state.weekOverrides[dateStr];
   return state.weekNum;
 }
@@ -906,6 +872,11 @@ function renderDayWorkout(dow) {
     html += `<div style="text-align:center;padding:11px;color:var(--accent);font-weight:600;font-size:13px;background:var(--surface);border-radius:11px;margin-bottom:11px;border:1px solid var(--border)">🎉 Session complete!</div>`;
   }
 
+  // Post-workout cardio reminder for workout days (not rest, not cardio-only)
+  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio') {
+    html += `<div style="background:rgba(91,142,240,.08);border:1px solid rgba(91,142,240,.25);border-radius:9px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--blue)">🚶 <strong>Post-workout cardio:</strong> Incline treadmill ~5% incline, 3.0 kmph, 20 min</div>`;
+  }
+
   wkDef.exercises.forEach(ex => {
     const allDone = Array.from({length:ex.sets},(_,i)=>getSetD(dateStr,resolved.workoutKey,ex.id,i).done).every(Boolean);
     html += `<div class="ex-block"><div class="ex-header">
@@ -915,26 +886,22 @@ function renderDayWorkout(dow) {
       </div>
       ${allDone?'<span class="ex-done-badge">✓ Done</span>':''}
     </div>
-    <div class="set-row" style="padding-top:4px;padding-bottom:4px">
+    <div class="set-row hdr" style="padding-top:4px;padding-bottom:4px">
       <div class="col-head">Set</div><div class="col-head">Weight (lbs)</div>
       <div class="col-head">Target</div><div class="col-head">Actual</div><div class="col-head">✓</div>
     </div>`;
 
-    const showW = ex.type!=='core' && ex.type!=='cardio';
     for (let si=0; si<ex.sets; si++) {
       const sd = getSetD(dateStr, resolved.workoutKey, ex.id, si);
       const target = getRepTarget(ex, si, wkNum);
       const defW = state.exWeights[ex.id] || '';
       const showW = ex.type!=='core' && ex.type!=='cardio';
       const targetDisp = target!==null ? target : (ex.note||'—');
-      const chkId = `chk_${ex.id}_${si}`;
-      const wInputId = `wi_${ex.id}_${si}`;
-      const rInputId = `ri_${ex.id}_${si}`;
       html += `<div class="set-row" style="${sd.done?'opacity:.5':''}">
         <div class="set-label">${getSetLabel(ex,si)}</div>
-        <div>${showW?`<input id="${wInputId}" class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="${defW}" value="${sd.weight||''}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
+        <div>${showW?`<input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="${defW}" value="${sd.weight||''}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
         <div class="rep-target">${targetDisp}</div>
-        <div>${ex.type!=='cardio'?`<input id="${rInputId}" class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
+        <div>${ex.type!=='cardio'?`<input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
         <div><button class="chk-btn ${sd.done?'done':''}" onclick="toggleDone('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},this)"><svg viewBox="0 0 12 10"><path d="M1 5L4.5 8.5L11 1"/></svg></button></div>
         <div class="set-row-top">
           <span class="set-label">${getSetLabel(ex,si)}</span>
@@ -987,7 +954,6 @@ function toggleDone(dateStr, workoutKey, exId, si, btn) {
   btn.classList.toggle('done', sd.done);
   btn.closest('.set-row').style.opacity = sd.done ? '0.5' : '1';
   save(); renderWeekGrid();
-  // Refresh complete button state
   const dow = dowOfDate(dateStr);
   if (dow === selDow) renderDayWorkout(dow);
 }
@@ -1004,14 +970,12 @@ function completeWorkout(dateStr) {
 // ─── Hard Reset Logic ─────────────────────────────────────────────────────
 function openResetModal() {
   const dateStr = todayStr();
-
   const modal = document.getElementById('resetModal');
   const title = document.getElementById('modalTitle');
   const desc = document.getElementById('modalDesc');
   const preview = document.getElementById('cascadePreview');
   const actions = document.getElementById('modalActions');
 
-  // Always cascade — Sunday included. Today becomes rest, workout shifts forward.
   const resolved = resolveDay(dateStr);
   const workoutToShift = resolved.workoutKey !== 'rest' ? resolved.workoutKey : null;
 
@@ -1020,22 +984,17 @@ function openResetModal() {
     return;
   }
 
-  // Build cascade chain
   const cascade = buildCascade(dateStr, workoutToShift);
-
-  // Check if cascade hits Sunday (DOW 0) — complete rest day
   const hitsSun = cascade.some(c => dowOfDate(c.to) === 0);
 
   if (hitsSun) {
-    const sunEntry = cascade.find(c => dowOfDate(c.to) === 0);
     pendingSatForce = { dateStr, workoutToShift, cascade };
     document.getElementById('satModalDesc').textContent =
-      `The cascade from today's reset pushes "${WORKOUT_DEFS[sunEntry.workoutKey]?.name.split('—')[0].trim()}" onto Sunday — your complete rest day. Do you want to force gym on Sunday and shift everything by 1 day?`;
+      `The cascade from today's reset pushes "${WORKOUT_DEFS[cascade.find(c=>dowOfDate(c.to)===0).workoutKey]?.name.split('—')[0].trim()}" onto Sunday — your complete rest day. Do you want to force gym on Sunday and shift everything by 1 day?`;
     document.getElementById('satModal').classList.add('show');
     return;
   }
 
-  // Normal cascade preview
   title.textContent = '🔴 Hard Reset — Mid-Routine';
   desc.textContent = `Today becomes a rest day. Your "${WORKOUT_DEFS[workoutToShift]?.name.split('—')[0].trim()}" session shifts forward. Progressive overload resets to Week 1 for the shifted session.`;
   preview.style.display = 'block';
@@ -1047,37 +1006,24 @@ function openResetModal() {
 }
 
 function buildCascade(fromDate, workoutKey) {
-  // Builds array of { from, to, workoutKey }
-  // Every day shifts down by 1 — cardio and rest days shift too,
-  // displacing whatever was there. We carry the displaced workout forward.
   const chain = [];
-
-  // Collect the full week from fromDate onwards (up to 7 days)
-  // and shift everything by 1, carrying displaced workouts forward.
-  let shiftWorkout = workoutKey; // the workout being displaced into the next day
+  let shiftWorkout = workoutKey;
   let currentDate = fromDate;
 
   for (let i = 0; i < 7; i++) {
     const nextDate = addDays(currentDate, 1);
     const nextDow = dowOfDate(nextDate);
-
-    // What was originally planned for nextDate?
     const nextResolved = resolveDay(nextDate);
-    const nextWorkout = nextResolved.workoutKey; // what gets displaced from nextDate
+    const nextWorkout = nextResolved.workoutKey;
 
-    // Push shiftWorkout into nextDate
     chain.push({ from: currentDate, to: nextDate, workoutKey: shiftWorkout });
 
-    // If nextDate had a workout (not rest), that workout is now displaced and needs to shift further
     if (nextResolved.type === 'workout' && nextResolved.workoutKey !== 'rest') {
       shiftWorkout = nextWorkout;
       currentDate = nextDate;
     } else {
-      // Next day was rest/cardio with no workout to displace — cascade ends
       break;
     }
-
-    // Stop if we've hit Sunday (DOW 0) — caller handles the warning
     if (nextDow === 0) break;
   }
   return chain;
@@ -1103,7 +1049,6 @@ function confirmSatForce() {
   if (!pendingSatForce) return;
   closeSatModal();
   const { dateStr, workoutToShift, cascade } = pendingSatForce;
-  // Force all cascade including Saturday
   applyReset(dateStr, cascade);
   pendingSatForce = null;
   showToast('⚠️ Sunday gym forced. No excuses!', 'orange', 3000);
@@ -1115,14 +1060,10 @@ function executeCascadeReset(cascade, dateStr) {
 }
 
 function applyReset(dateStr, cascade) {
-  // Today → rest
   state.dayOverrides[dateStr] = 'rest';
-  // Apply cascade shifts
   cascade.forEach(c => {
     state.cascadeShifts[c.to] = c.workoutKey;
-    // Override the "from" day as rest if it's not the original reset date
     if (c.from !== dateStr) state.dayOverrides[c.from] = 'rest';
-    // Reset PO week to 1 for shifted session
     state.weekOverrides[c.to] = 1;
   });
   save(); renderAll();
@@ -1130,12 +1071,11 @@ function applyReset(dateStr, cascade) {
 }
 
 // ─── Food ─────────────────────────────────────────────────────────────────
-// ── Food day navigation ──────────────────────────────────────────────────
-let foodDayOffset = 0; // 0 = today, -1 = yesterday, etc.
+let foodDayOffset = 0;
 
 function foodNavDay(dir) {
   const newOffset = foodDayOffset + dir;
-  if (newOffset > 0) return; // Can't go to future
+  if (newOffset > 0) return;
   foodDayOffset = newOffset;
   renderFoodLog();
 }
@@ -1170,18 +1110,15 @@ function completeFoodLog() {
   if (!state.completedLogs[dateStr]) state.completedLogs[dateStr] = {};
   const alreadyDone = state.completedLogs[dateStr].food;
   if (alreadyDone) {
-    // Toggle off
     state.completedLogs[dateStr].food = false;
     save(); renderFoodLog(); showToast('Food log unmarked', 'orange');
     return;
   }
   state.completedLogs[dateStr].food = true;
 
-  // ── Weekly adjustment logic ──────────────────────────────────────────
-  // Count how many days this week are logged and how far off targets
   const today = new Date();
   const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+  weekStart.setDate(today.getDate() - today.getDay() + 1);
   let totalCalsLogged = 0, totalProtLogged = 0, daysLogged = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart);
@@ -1199,9 +1136,8 @@ function completeFoodLog() {
     const avgProt = Math.round(totalProtLogged / daysLogged);
     const calDiff = avgCals - TARGETS.cals;
     const protDiff = avgProt - TARGETS.protein;
-    // Adjust targets for next week if consistently over/under by >100 kcal or >15g
     if (Math.abs(calDiff) > 100) {
-      state.weeklyCalAdjust = -Math.round(calDiff * 0.5); // nudge halfway
+      state.weeklyCalAdjust = -Math.round(calDiff * 0.5);
     }
     if (Math.abs(protDiff) > 15) {
       state.weeklyProtAdjust = -Math.round(protDiff * 0.5);
@@ -1223,7 +1159,6 @@ function renderFoodLog() {
   const isToday = foodDayOffset === 0;
   const targets = getAdjustedTargets();
 
-  // Day navigator labels
   const dayLabel = foodDayOffset === 0 ? 'Today' : foodDayOffset === -1 ? 'Yesterday' : `${Math.abs(foodDayOffset)} days ago`;
   document.getElementById('foodDayLabel').textContent = dayLabel;
   document.getElementById('foodDayDate').textContent = fmtDate(dateStr);
@@ -1232,13 +1167,11 @@ function renderFoodLog() {
   document.getElementById('logMealTitle').textContent = isToday ? 'Log a Meal' : `Log a Meal — ${fmtDate(dateStr)}`;
   document.getElementById('mealsListTitle').textContent = isToday ? "Today's Meals" : `Meals — ${fmtDate(dateStr)}`;
 
-  // Meals for selected day
   const t = state.meals.filter(m => m.date === dateStr);
   const totCals = t.reduce((a, m) => a + m.cals, 0);
   const totProt = t.reduce((a, m) => a + m.protein, 0);
   const totCarbs = t.reduce((a, m) => a + m.carbs, 0);
 
-  // Stats
   const calEl = document.getElementById('totalCals');
   const protEl = document.getElementById('totalProtein');
   calEl.textContent = totCals;
@@ -1248,7 +1181,6 @@ function renderFoodLog() {
   protEl.className = `stat-value${totProt >= targets.protein ? ' stat-hit' : ''}`;
   protEl.style.fontSize = '28px';
 
-  // Target bars
   const calPct = Math.min(110, Math.round(totCals / targets.cals * 100));
   const protPct = Math.min(110, Math.round(totProt / targets.protein * 100));
   document.getElementById('calBarFill').style.width = calPct + '%';
@@ -1260,7 +1192,6 @@ function renderFoodLog() {
   document.getElementById('calsSubtext').textContent = `Target: ${targets.cals} kcal`;
   document.getElementById('protSubtext').textContent = `Target: ${targets.protein}g`;
 
-  // ── Weekly summary ────────────────────────────────────────────────────
   const today = new Date();
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - today.getDay() + 1);
@@ -1277,11 +1208,11 @@ function renderFoodLog() {
     const isComplete = state.completedLogs[dk]?.food;
     const isSelected = dk === dateStr;
     if (dayMeals.length > 0) { weekTotCals += dCals; weekTotProt += dProt; weekDays++; }
-    const dayName = d.toLocaleDateString('en', { weekday: 'short' });
+    const dn = d.toLocaleDateString('en', { weekday: 'short' });
     const calColor = dCals >= targets.cals ? 'var(--accent)' : dCals > 0 ? 'var(--accent2)' : 'var(--muted)';
     weekHTML += `<div onclick="foodJumpTo('${dk}')" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;cursor:pointer;background:${isSelected ? 'var(--surface2)' : 'transparent'};border:1px solid ${isSelected ? 'var(--accent)' : 'transparent'}">
       <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;font-weight:700;color:var(--muted);width:28px">${dayName}</span>
+        <span style="font-size:10px;font-weight:700;color:var(--muted);width:28px">${dn}</span>
         <span style="font-size:11px;color:var(--text)">${fmtDate(dk)}</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
@@ -1298,7 +1229,6 @@ function renderFoodLog() {
       <span>Avg ${weekDays} days logged</span>
       <span style="color:var(--accent2)">${avgCals} kcal · ${avgProt}g protein</span>
     </div>`;
-    // Show adjustment notice if active
     if (state.weeklyCalAdjust || state.weeklyProtAdjust) {
       const calAdj = state.weeklyCalAdjust || 0;
       const protAdj = state.weeklyProtAdjust || 0;
@@ -1309,7 +1239,6 @@ function renderFoodLog() {
   }
   document.getElementById('weeklySummary').innerHTML = weekHTML;
 
-  // Meals list
   const l = document.getElementById('mealList');
   if (!t.length) { l.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:6px">No meals logged for ${isToday ? 'today' : fmtDate(dateStr)}.</div>`; }
   else l.innerHTML = t.map(m => `<div class="meal-card">
@@ -1321,13 +1250,11 @@ function renderFoodLog() {
     <div class="macro-pills"><span class="macro-pill p">P: ${m.protein}g</span><span class="macro-pill c">C: ${m.carbs}g</span><span class="macro-pill f">F: ${m.fat}g</span></div>
   </div>`).join('');
 
-  // Complete button — always enabled, toggleable
   const alreadyDone = state.completedLogs[dateStr]?.food;
   const btn = document.getElementById('foodCompleteBtn');
   btn.className = `complete-btn ${alreadyDone ? 'already-done' : 'ready'}`;
   btn.textContent = alreadyDone ? '✅ Food Log Complete — Tap to Undo' : '✅ Mark Food Log Complete';
 
-  // Checklist
   const calMet = totCals >= targets.cals;
   const protMet = totProt >= targets.protein;
   document.getElementById('foodChecklist').innerHTML = `
@@ -1370,17 +1297,14 @@ function completeWeightLog() {
   save(); renderWeightLog(); showToast('⚖️ Weight log confirmed!');
 }
 
-// ── Dynamic calorie targets based on current weight ──────────────────────
 function updateDynamicTargets(currentKg) {
   const startKg = state.startWeight || currentKg;
   const kgLost = Math.max(0, startKg - currentKg);
-  const reduction = Math.floor(kgLost / 5) * 100; // -100 kcal per 5kg lost
+  const reduction = Math.floor(kgLost / 5) * 100;
   TARGETS.cals = Math.max(1700, 2200 - reduction);
   TARGETS.carbs = Math.max(130, 200 - Math.floor(reduction / 10));
-  // Protein stays constant
 }
 
-// ── Milestone logic ───────────────────────────────────────────────────────
 function checkMilestoneAchieved(currentKg) {
   if (!state.milestones) state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
   const idx = state.activeMilestoneIdx || 0;
@@ -1394,11 +1318,9 @@ function checkMilestoneAchieved(currentKg) {
 
 function openMilestoneModal() {
   const m = document.getElementById('milestoneModal');
-  // Pre-fill next logical milestone
   const cur = state.milestones[state.activeMilestoneIdx];
   const nextW = cur ? Math.max(50, cur.weight - 5) : 95;
   document.getElementById('newMilestoneWeight').value = nextW;
-  // Default 8 weeks from now
   const d = new Date(); d.setDate(d.getDate()+56);
   document.getElementById('newMilestoneDate').value = d.toISOString().split('T')[0];
   m.classList.add('show');
@@ -1420,7 +1342,7 @@ function saveMilestone() {
 }
 
 // ── Graph ─────────────────────────────────────────────────────────────────
-let graphRange = 0; // 0 = all, 4 = 4 weeks, 8 = 8 weeks
+let graphRange = 0;
 
 function setGraphRange(weeks, btn) {
   graphRange = weeks;
@@ -1443,20 +1365,16 @@ function drawWeightChart() {
   const W = rect.width, H = 180;
   ctx.clearRect(0, 0, W, H);
 
-  // Get data
   let data = [...state.weights_log].sort((a,b)=>a.date.localeCompare(b.date));
-
-  // Group by week (use the last reading per week)
   const weekMap = {};
   data.forEach(d => {
     const dt = new Date(d.date+'T00:00:00');
-    dt.setDate(dt.getDate() - dt.getDay()); // start of week
+    dt.setDate(dt.getDate() - dt.getDay());
     const wk = dt.toISOString().split('T')[0];
     weekMap[wk] = d.val;
   });
   let weekData = Object.entries(weekMap).sort((a,b)=>a[0].localeCompare(b[0]));
 
-  // Apply range filter
   if (graphRange > 0) {
     weekData = weekData.slice(-graphRange);
   }
@@ -1473,7 +1391,6 @@ function drawWeightChart() {
   const cW = W - PAD.l - PAD.r;
   const cH = H - PAD.t - PAD.b;
 
-  // Y range
   const vals = weekData.map(d=>d[1]);
   const activeM = state.milestones?.[state.activeMilestoneIdx];
   if (activeM) vals.push(activeM.weight);
@@ -1484,7 +1401,6 @@ function drawWeightChart() {
   function xp(i) { return PAD.l + (weekData.length === 1 ? cW/2 : (i/(weekData.length-1))*cW); }
   function yp(v) { return PAD.t + cH - ((v-yMin)/yRange)*cH; }
 
-  // Grid lines
   const gridLines = 4;
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = 1;
@@ -1498,7 +1414,6 @@ function drawWeightChart() {
     ctx.fillText(val.toFixed(1), PAD.l-5, y+3);
   }
 
-  // Goal/milestone line
   if (activeM) {
     const gy = yp(activeM.weight);
     ctx.strokeStyle = 'rgba(241,53,53,0.5)';
@@ -1512,7 +1427,6 @@ function drawWeightChart() {
     ctx.fillText(activeM.weight+' kg', PAD.l+3, gy-3);
   }
 
-  // Area fill under line
   if (weekData.length > 1) {
     ctx.beginPath();
     ctx.moveTo(xp(0), yp(weekData[0][1]));
@@ -1527,7 +1441,6 @@ function drawWeightChart() {
     ctx.fill();
   }
 
-  // Line
   ctx.strokeStyle = '#c8f135';
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
@@ -1536,7 +1449,6 @@ function drawWeightChart() {
   weekData.forEach((d,i) => { i===0 ? ctx.moveTo(xp(i),yp(d[1])) : ctx.lineTo(xp(i),yp(d[1])); });
   ctx.stroke();
 
-  // Dots
   weekData.forEach((d,i) => {
     ctx.beginPath();
     ctx.arc(xp(i), yp(d[1]), 4, 0, Math.PI*2);
@@ -1547,7 +1459,6 @@ function drawWeightChart() {
     ctx.stroke();
   });
 
-  // X labels (show every other if crowded)
   const step = weekData.length > 8 ? Math.ceil(weekData.length/6) : 1;
   weekData.forEach((d,i) => {
     if (i % step !== 0 && i !== weekData.length-1) return;
@@ -1559,7 +1470,6 @@ function drawWeightChart() {
     ctx.fillText(lbl, xp(i), H-PAD.b+12);
   });
 
-  // Value labels on dots
   weekData.forEach((d,i) => {
     ctx.fillStyle = '#e8e8ee';
     ctx.font = 'bold 9px DM Sans, sans-serif';
@@ -1572,20 +1482,17 @@ function renderWeightLog() {
   const s = [...state.weights_log].sort((a,b)=>b.date.localeCompare(a.date));
   const latest = s[0];
 
-  // Active milestone
   if (!state.milestones || !state.milestones.length) {
     state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
   }
   const idx = state.activeMilestoneIdx || 0;
   const milestone = state.milestones[idx];
 
-  // Stats
   if (latest) {
     document.getElementById('currentWeight').textContent = latest.val+' kg';
     document.getElementById('weightSub').textContent = 'Logged '+fmtDate(latest.date);
     updateDynamicTargets(latest.val);
 
-    // Milestone stats
     if (milestone) {
       const diff = latest.val - milestone.weight;
       document.getElementById('goalLabel').textContent = milestone.achieved ? 'Milestone ✅' : 'To Milestone';
@@ -1593,7 +1500,6 @@ function renderWeightLog() {
       document.getElementById('goalDeadlineSub').textContent = 'By '+fmtDate(milestone.date);
     }
 
-    // Goal bar
     const sw = state.startWeight || state.weights_log[0]?.val || latest.val;
     if (milestone) {
       const pct = Math.min(100, Math.max(0, Math.round((sw-latest.val)/Math.max(0.1,sw-milestone.weight)*100)));
@@ -1610,7 +1516,6 @@ function renderWeightLog() {
         : kl>0 ? `${kl.toFixed(1)} kg left · ${wl} weeks · ~${(kl/wl).toFixed(2)} kg/week needed` : '🎯 So close!';
     }
 
-    // Milestone achieved banner
     const banner = document.getElementById('milestoneAchievedBanner');
     if (milestone?.achieved) {
       banner.style.display = 'block';
@@ -1623,7 +1528,6 @@ function renderWeightLog() {
       banner.style.display = 'none';
     }
 
-    // Nutrition adjustment card
     const adjCard = document.getElementById('nutritionAdjCard');
     const kgLost = Math.max(0, sw - latest.val);
     if (kgLost >= 5) {
@@ -1658,7 +1562,6 @@ function renderWeightLog() {
   btn.textContent = alreadyDone?'✅ Weight Logged for Today':todayLogged?'✅ Confirm Weight Log':'Log your weight first';
   btn.onclick = alreadyDone||!todayLogged ? null : completeWeightLog;
 
-  // History
   const h = document.getElementById('weightHistory');
   if (!s.length) { h.innerHTML='<div style="color:var(--muted);font-size:12px">Log tomorrow morning on empty stomach.</div>'; return; }
   h.innerHTML = s.map((w,i)=>{
@@ -1709,7 +1612,6 @@ function renderJunkPage() {
       <div>${d.toLocaleDateString('en',{weekday:'short',day:'numeric'})}</div><div style="font-size:13px;margin-top:2px">${em}</div></div>`;
   }
 
-  // Complete section
   const dayMarked = !!state.cleanDays[todayStr()];
   const alreadyDone = state.completedLogs[todayStr()]?.junk;
   document.getElementById('junkChecklist').innerHTML = `
