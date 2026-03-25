@@ -579,7 +579,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────
-const STORE_KEY = 'coach-fitness-v3';
+const STORE_KEY = 'coach-fitness-v4';
 const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
@@ -708,12 +708,14 @@ function pad(n){return n<10?'0'+n:''+n}
 function localDateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function todayStr() { return localDateStr(new Date()); }
 function todayDow() { return new Date().getDay(); }
-function fmtDate(s) { return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}); }
+function fmtDate(s) { const p=s.split('-'); return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}); }
 function addDays(dateStr, n) {
-  const d = new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n);
+  const p = dateStr.split('-');
+  const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+  d.setDate(d.getDate()+n);
   return localDateStr(d);
 }
-function dowOfDate(dateStr) { return new Date(dateStr+'T00:00:00').getDay(); }
+function dowOfDate(dateStr) { const p=dateStr.split('-'); return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])).getDay(); }
 function dayName(dow) { return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dow]; }
 
 function showToast(msg, type='green', dur=2000) {
@@ -738,8 +740,10 @@ function resolveDay(dateStr) {
     const wk = state.dayOverrides[dateStr];
     return { label: WORKOUT_DEFS[wk]?.name.split('—')[0].trim() || wk, type: 'workout', workoutKey: wk };
   }
-  // Default from DOW
-  const dow = dowOfDate(dateStr);
+  // Default from DOW — use local parsing
+  const parts = dateStr.split('-');
+  const localD = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  const dow = localD.getDay();
   return BASE_SCHEDULE[dow];
 }
 
@@ -789,7 +793,11 @@ function renderWeekGrid() {
   const grid = document.getElementById('weekGrid');
   const todayDate = todayStr();
   grid.innerHTML = '';
-  const d = new Date(); d.setDate(d.getDate() - d.getDay());
+  // Start from Monday of current week
+  const d = new Date();
+  const currentDay = d.getDay();
+  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay; // if Sunday, go back 6 days
+  d.setDate(d.getDate() + diffToMon);
   for (let i=0; i<7; i++) {
     const dateStr = localDateStr(d);
     const dow = d.getDay();
@@ -1286,8 +1294,9 @@ function renderFoodLog() {
 }
 
 function foodJumpTo(dateStr) {
-  const today = new Date(todayStr() + 'T00:00:00');
-  const target = new Date(dateStr + 'T00:00:00');
+  function parseLocal(s){const p=s.split('-');return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+  const today = parseLocal(todayStr());
+  const target = parseLocal(dateStr);
   const diff = Math.round((target - today) / 86400000);
   if (diff > 0) return;
   foodDayOffset = diff;
