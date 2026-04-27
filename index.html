@@ -291,7 +291,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <header>
-  <div class="logo">COACH<span>Sun–Fri Routine · Sat Rest</span></div>
+  <div class="logo">COACH<span>Mon–Sat Routine · Sun Rest</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -579,18 +579,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────
-const STORE_KEY = 'coach-fitness-v7';
+const STORE_KEY = 'coach-fitness-v8';
 const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'PUSH',              type:'workout', workoutKey:'push'},
-  1:{name:'Mon',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
-  2:{name:'Tue',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
-  3:{name:'Wed',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
-  4:{name:'Thu',label:'UPPER',             type:'workout', workoutKey:'upper'},
-  5:{name:'Fri',label:'LOWER + Core',      type:'workout', workoutKey:'legs_quad'},
-  6:{name:'Sat',label:'REST',              type:'rest',    workoutKey:'rest'}
+  0:{name:'Sun',label:'REST',              type:'rest',    workoutKey:'rest'},
+  1:{name:'Mon',label:'PUSH',              type:'workout', workoutKey:'push'},
+  2:{name:'Tue',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
+  3:{name:'Wed',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
+  4:{name:'Thu',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
+  5:{name:'Fri',label:'UPPER',             type:'workout', workoutKey:'upper'},
+  6:{name:'Sat',label:'LOWER + Core',      type:'workout', workoutKey:'legs_quad'}
 };
 
 const CORE_EX = (pfx) => [
@@ -793,9 +793,11 @@ function renderWeekGrid() {
   const grid = document.getElementById('weekGrid');
   const todayDate = todayStr();
   grid.innerHTML = '';
-  // Start from Sunday of current week
+  // Start from Monday of current week
   const d = new Date();
-  d.setDate(d.getDate() - d.getDay());
+  const currentDay = d.getDay();
+  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
+  d.setDate(d.getDate() + diffToMon);
   for (let i=0; i<7; i++) {
     const dateStr = localDateStr(d);
     const dow = d.getDay();
