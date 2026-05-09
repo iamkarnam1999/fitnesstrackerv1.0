@@ -291,7 +291,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <header>
-  <div class="logo">COACH<span>Mon–Sat Routine · Sun Rest</span></div>
+  <div class="logo">COACH<span>Sun–Fri Routine · Sat Rest</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -409,6 +409,29 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="grid-2" style="margin-bottom:12px">
     <div class="stat-card"><div class="stat-label">Current Weight</div><div class="stat-value" id="currentWeight">— kg</div><div class="stat-sub" id="weightSub">Not logged yet</div></div>
     <div class="stat-card"><div class="stat-label" id="goalLabel">To Milestone</div><div class="stat-value" id="toGoal">—</div><div class="stat-sub" id="goalDeadlineSub"></div></div>
+  </div>
+
+  <!-- Set Goal -->
+  <div class="card" style="margin-bottom:12px">
+    <h3>Fat Loss Goal</h3>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="grid-2" style="gap:8px">
+        <div>
+          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Current Weight (kg)</label>
+          <input type="number" id="goalCurrentWeight" placeholder="e.g. 108" step="0.1" inputmode="decimal">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Target Weight (kg)</label>
+          <input type="number" id="goalTargetWeight" placeholder="e.g. 95" step="0.5" inputmode="decimal">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Target Date</label>
+        <input type="date" id="goalTargetDate">
+      </div>
+      <button class="btn" onclick="setFatLossGoal()" style="align-self:flex-start">Set Goal</button>
+    </div>
+    <div id="goalSummary" style="margin-top:8px;font-size:11px;color:var(--muted);display:none"></div>
   </div>
 
   <!-- Active milestone progress bar -->
@@ -579,18 +602,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────
-const STORE_KEY = 'coach-fitness-v8';
+const STORE_KEY = 'coach-fitness-v9';
 const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'REST',              type:'rest',    workoutKey:'rest'},
-  1:{name:'Mon',label:'PUSH',              type:'workout', workoutKey:'push'},
-  2:{name:'Tue',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
-  3:{name:'Wed',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
-  4:{name:'Thu',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
-  5:{name:'Fri',label:'UPPER',             type:'workout', workoutKey:'upper'},
-  6:{name:'Sat',label:'LOWER + Core',      type:'workout', workoutKey:'legs_quad'}
+  0:{name:'Sun',label:'PUSH',              type:'workout', workoutKey:'push'},
+  1:{name:'Mon',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
+  2:{name:'Tue',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
+  3:{name:'Wed',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
+  4:{name:'Thu',label:'UPPER',             type:'workout', workoutKey:'upper'},
+  5:{name:'Fri',label:'LOWER + Core',      type:'workout', workoutKey:'legs_quad'},
+  6:{name:'Sat',label:'REST',              type:'rest',    workoutKey:'rest'}
 };
 
 const CORE_EX = (pfx) => [
@@ -602,7 +625,7 @@ const WORKOUT_DEFS = {
     {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_shpress',  name:'DB Shoulder Press',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_lateral',  name:'Lateral Raises',             type:'isolation', sets:3, reps:[10,12,15]},
+    {id:'p_lateral',  name:'Cable Lateral Raises',      type:'isolation', sets:3, reps:[10,12,15]},
     {id:'p_pushdown', name:'Rope Tricep Pushdown',       type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_skull',    name:'DB Tricep Skullcrushers',    type:'isolation', sets:3, reps:[12,13,15]},
   ]},
@@ -680,16 +703,7 @@ const DEFAULT_STATE = {
   weekNum: 1, cycleNum: 1,
   routineStarted: false,
   routineStartDate: null,
-  dayOverrides: {
-    // Week 1 only: Tue May 5 - Sun May 10, 2026
-    '2026-05-04': 'rest',              // Mon May 4 — no workout (week starts Tue)
-    '2026-05-05': 'push',              // Tue — Push
-    '2026-05-06': 'pull',              // Wed — Pull + Core
-    '2026-05-07': 'legs_ham',          // Thu — Ham
-    '2026-05-08': 'upper_core',        // Fri — Upper + Core
-    '2026-05-09': 'legs_quad_nocore',  // Sat — Lower Body (Quad, no core)
-    '2026-05-10': 'cardio',            // Sun — Active Rest + Core
-  },
+  dayOverrides: {},
   cascadeShifts: {},
   weekOverrides: {},
   sessionData: {},
@@ -807,7 +821,18 @@ function advanceWeek() {
   } else {
     Object.keys(state.exWeights).forEach(id => {
       const ex = findEx(id);
-      if (ex && ex.type==='compound') state.exWeights[id] = (parseFloat(state.exWeights[id])||0)+5;
+      if (ex && ex.type==='compound') {
+        const stored = state.exWeights[id];
+        if (stored && typeof stored === 'object') {
+          // New per-set format: add 5 to each set
+          Object.keys(stored).forEach(si => {
+            stored[si] = (parseFloat(stored[si])||0)+5;
+          });
+        } else {
+          // Old single-value format
+          state.exWeights[id] = (parseFloat(stored)||0)+5;
+        }
+      }
     });
     state.weekNum = 1; state.cycleNum++;
     alert(`🎉 Cycle complete!\n\nAll compound lifts +5 lbs.\nStarting Cycle ${state.cycleNum}, Week 1.`);
@@ -829,13 +854,11 @@ function renderWeekGrid() {
   const oldNav = document.getElementById('weekNav');
   if (oldNav) oldNav.remove();
 
-  // Start from Monday of target week
+  // Start from Sunday of target week
   const d = new Date();
-  const currentDay = d.getDay();
-  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
-  d.setDate(d.getDate() + diffToMon + (weekOffset * 7));
+  d.setDate(d.getDate() - d.getDay() + (weekOffset * 7));
 
-  const weekMonDate = localDateStr(d);
+  const weekStartDate = localDateStr(d);
 
   for (let i=0; i<7; i++) {
     const dateStr = localDateStr(d);
@@ -873,14 +896,14 @@ function renderWeekGrid() {
     <button class="btn secondary sm" onclick="weekOffset--;renderWeekGrid();if(weekOffset===0)renderDayWorkout(selDow)">‹ Prev</button>
     <div style="text-align:center">
       <div style="font-weight:600;font-size:12px">${weekLabel}</div>
-      <div style="font-size:10px;color:var(--muted)">${fmtDate(weekMonDate)} – ${fmtDate(addDays(weekMonDate, 6))}</div>
+      <div style="font-size:10px;color:var(--muted)">${fmtDate(weekStartDate)} – ${fmtDate(addDays(weekStartDate, 6))}</div>
     </div>
     <button class="btn secondary sm" onclick="weekOffset++;renderWeekGrid();if(weekOffset===0)renderDayWorkout(selDow)">Next ›</button>
   `;
   grid.parentNode.insertBefore(weekNav, grid);
 
   // Schedule indicator
-  const hasOverrides = Object.keys(state.dayOverrides).some(k => k >= weekMonDate && k <= addDays(weekMonDate, 6));
+  const hasOverrides = Object.keys(state.dayOverrides).some(k => k >= weekStartDate && k <= addDays(weekStartDate, 6));
   const indicator = document.createElement('div');
   indicator.id = 'scheduleIndicator';
   indicator.style.cssText = 'font-size:10px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px';
@@ -989,15 +1012,22 @@ function renderDayWorkout(dow) {
     for (let si=0; si<ex.sets; si++) {
       const sd = getSetD(dateStr, resolved.workoutKey, ex.id, si);
       const target = getRepTarget(ex, si, wkNum);
-      const defW = state.exWeights[ex.id] || '';
-      const displayW = sd.weight || defW; // Show last used weight if no session weight
+      // Support both old format (single number) and new format (object with set indices)
+      let defW = '';
+      const stored = state.exWeights[ex.id];
+      if (stored && typeof stored === 'object') {
+        defW = stored[String(si)] || stored['0'] || '';
+      } else if (stored) {
+        defW = stored; // old single-value format
+      }
+      const displayW = sd.weight || defW;
       const showW = ex.type!=='core' && ex.type!=='cardio';
       const targetDisp = target!==null ? target : (ex.note||'—');
       html += `<div class="set-row" style="${sd.done?'opacity:.5':''}">
         <div class="set-label">${getSetLabel(ex,si)}</div>
-        <div>${showW?`<input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
+        <div>${showW?`<input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
         <div class="rep-target">${targetDisp}</div>
-        <div>${ex.type!=='cardio'?`<input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
+        <div>${ex.type!=='cardio'?`<input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
         <div><button class="chk-btn ${sd.done?'done':''}" onclick="toggleDone('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},this)"><svg viewBox="0 0 12 10"><path d="M1 5L4.5 8.5L11 1"/></svg></button></div>
         <div class="set-row-top">
           <span class="set-label">${getSetLabel(ex,si)}</span>
@@ -1005,8 +1035,8 @@ function renderDayWorkout(dow) {
           <button class="chk-btn ${sd.done?'done':''}" onclick="toggleDone('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},this)"><svg viewBox="0 0 12 10"><path d="M1 5L4.5 8.5L11 1"/></svg></button>
         </div>
         <div class="set-row-bottom">
-          ${showW?`<div class="input-group"><label>Weight (lbs)</label><input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)"></div>`:''}
-          ${ex.type!=='cardio'?`<div class="input-group"><label>Actual Reps</label><input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)"></div>`:''}
+          ${showW?`<div class="input-group"><label>Weight (lbs)</label><input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)"></div>`:''}
+          ${ex.type!=='cardio'?`<div class="input-group"><label>Actual Reps</label><input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)"></div>`:''}
         </div>
       </div>`;
     }
@@ -1041,18 +1071,44 @@ function renderDayWorkout(dow) {
 
 function updateF(dateStr, workoutKey, exId, si, field, val) {
   getSetD(dateStr, workoutKey, exId, si)[field] = val;
-  // Persist weight to exWeights so it carries across weeks
+  // Persist weight per set index so top set and back-off can differ
   if (field === 'weight' && val) {
-    state.exWeights[exId] = parseFloat(val);
+    if (!state.exWeights[exId] || typeof state.exWeights[exId] !== 'object') {
+      // Migrate from old single-value format
+      const oldVal = state.exWeights[exId];
+      state.exWeights[exId] = {};
+      if (oldVal) state.exWeights[exId]['0'] = parseFloat(oldVal);
+    }
+    state.exWeights[exId][String(si)] = parseFloat(val);
   }
   save();
 }
 
 function toggleDone(dateStr, workoutKey, exId, si, btn) {
+  // Capture all current input values before re-render
+  document.querySelectorAll('.set-row').forEach(row => {
+    const wInput = row.querySelector('.w-input');
+    const rInput = row.querySelector('.r-input');
+    if (wInput && wInput.dataset.key) {
+      const [d, wk, eid, idx] = wInput.dataset.key.split('|');
+      getSetD(d, wk, eid, parseInt(idx)).weight = wInput.value;
+      if (wInput.value) {
+        if (!state.exWeights[eid] || typeof state.exWeights[eid] !== 'object') {
+          const oldVal = state.exWeights[eid];
+          state.exWeights[eid] = {};
+          if (oldVal) state.exWeights[eid]['0'] = parseFloat(oldVal);
+        }
+        state.exWeights[eid][idx] = parseFloat(wInput.value);
+      }
+    }
+    if (rInput && rInput.dataset.key) {
+      const [d, wk, eid, idx] = rInput.dataset.key.split('|');
+      getSetD(d, wk, eid, parseInt(idx)).reps = rInput.value;
+    }
+  });
+
   const sd = getSetD(dateStr, workoutKey, exId, si);
   sd.done = !sd.done;
-  btn.classList.toggle('done', sd.done);
-  btn.closest('.set-row').style.opacity = sd.done ? '0.5' : '1';
   save(); renderWeekGrid();
   const dow = dowOfDate(dateStr);
   if (dow === selDow) renderDayWorkout(dow);
@@ -1375,6 +1431,29 @@ function foodJumpTo(dateStr) {
 
 
 // ─── Weight ────────────────────────────────────────────────────────────────
+function setFatLossGoal() {
+  const cw = parseFloat(document.getElementById('goalCurrentWeight').value);
+  const tw = parseFloat(document.getElementById('goalTargetWeight').value);
+  const td = document.getElementById('goalTargetDate').value;
+  if (!cw || cw < 30 || cw > 300) { showToast('Enter a valid current weight', 'orange'); return; }
+  if (!tw || tw < 30 || tw > 300) { showToast('Enter a valid target weight', 'orange'); return; }
+  if (tw >= cw) { showToast('Target should be less than current weight', 'orange'); return; }
+  if (!td) { showToast('Pick a target date', 'orange'); return; }
+
+  state.startWeight = cw;
+  // Log current weight if not already logged today
+  if (!state.weights_log.some(w => w.date === todayStr())) {
+    state.weights_log.push({ date: todayStr(), val: cw });
+    state.weights_log.sort((a, b) => a.date.localeCompare(b.date));
+  }
+  // Set milestone
+  state.milestones = [{ weight: tw, date: td, achieved: false, achievedDate: null }];
+  state.activeMilestoneIdx = 0;
+  save();
+  renderWeightLog();
+  showToast(`🎯 Goal set: ${cw} kg → ${tw} kg by ${fmtDate(td)}`);
+}
+
 function logWeight() {
   const v = parseFloat(document.getElementById('weightInput').value);
   if (!v||v<40||v>300) { alert('Enter a valid weight in kg'); return; }
@@ -1593,6 +1672,20 @@ function renderWeightLog() {
     document.getElementById('currentWeight').textContent = latest.val+' kg';
     document.getElementById('weightSub').textContent = 'Logged '+fmtDate(latest.date);
     updateDynamicTargets(latest.val);
+
+    // Populate goal fields with current values
+    document.getElementById('goalCurrentWeight').value = latest.val;
+    if (milestone) {
+      document.getElementById('goalTargetWeight').value = milestone.weight;
+      document.getElementById('goalTargetDate').value = milestone.date;
+      const toGo = (latest.val - milestone.weight).toFixed(1);
+      const weeksLeft = Math.max(1, Math.round((new Date(milestone.date) - new Date()) / 604800000));
+      const summary = document.getElementById('goalSummary');
+      summary.style.display = 'block';
+      summary.innerHTML = milestone.achieved
+        ? `<span style="color:var(--accent)">🏆 Goal achieved! You hit ${milestone.weight} kg on ${fmtDate(milestone.achievedDate)}</span>`
+        : `📊 ${toGo} kg to lose · ${weeksLeft} weeks left · ~${(toGo/weeksLeft).toFixed(2)} kg/week needed`;
+    }
 
     if (milestone) {
       const diff = latest.val - milestone.weight;
