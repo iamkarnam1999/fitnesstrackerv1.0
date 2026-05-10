@@ -291,7 +291,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <header>
-  <div class="logo">COACH<span>Sun–Thu Training · Fri Rest · Sat Off</span></div>
+  <div class="logo">COACH<span>Mon–Fri Training · Sat Active Rest · Sun Off</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -607,13 +607,13 @@ const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'PUSH',              type:'workout', workoutKey:'push'},
-  1:{name:'Mon',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
-  2:{name:'Tue',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
-  3:{name:'Wed',label:'UPPER + Core',      type:'workout', workoutKey:'upper_core'},
-  4:{name:'Thu',label:'LOWER',             type:'workout', workoutKey:'legs_quad_nocore'},
-  5:{name:'Fri',label:'Active Rest + Core',type:'workout', workoutKey:'cardio'},
-  6:{name:'Sat',label:'REST',              type:'rest',    workoutKey:'rest'}
+  0:{name:'Sun',label:'REST',              type:'rest',    workoutKey:'rest'},
+  1:{name:'Mon',label:'PUSH',              type:'workout', workoutKey:'push'},
+  2:{name:'Tue',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
+  3:{name:'Wed',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
+  4:{name:'Thu',label:'UPPER + Core',      type:'workout', workoutKey:'upper_core'},
+  5:{name:'Fri',label:'LOWER',             type:'workout', workoutKey:'legs_quad_nocore'},
+  6:{name:'Sat',label:'Active Rest',       type:'workout', workoutKey:'cardio_nocore'}
 };
 
 const CORE_EX = (pfx) => [
@@ -649,6 +649,9 @@ const WORKOUT_DEFS = {
   cardio:{name:'Active Rest — 30 min Incline Walk + Core', exercises:[
     {id:'c_walk',    name:'🚶 Incline Treadmill Walk', type:'cardio', sets:1, reps:[null], note:'30 min, ~5% incline, 3.0 kmph'},
     ...CORE_EX('c')
+  ]},
+  cardio_nocore:{name:'Active Rest — 30 min Incline Walk', exercises:[
+    {id:'c_walk',    name:'🚶 Incline Treadmill Walk', type:'cardio', sets:1, reps:[null], note:'30 min, ~5% incline, 3.0 kmph'},
   ]},
   upper:{name:'Upper Body — Chest · Shoulders · Back · Arms', exercises:[
     {id:'u_bench',    name:'Barbell Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
@@ -854,9 +857,11 @@ function renderWeekGrid() {
   const oldNav = document.getElementById('weekNav');
   if (oldNav) oldNav.remove();
 
-  // Start from Sunday of target week
+  // Start from Monday of target week
   const d = new Date();
-  d.setDate(d.getDate() - d.getDay() + (weekOffset * 7));
+  const currentDay = d.getDay();
+  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
+  d.setDate(d.getDate() + diffToMon + (weekOffset * 7));
 
   const weekStartDate = localDateStr(d);
 
