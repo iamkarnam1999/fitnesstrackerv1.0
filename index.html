@@ -693,14 +693,6 @@ const WORKOUT_DEFS = {
   ]}
 };
 
-const START_W = {
-  p_bench:25,p_incline:25,p_shpress:25,p_lateral:12,p_pushdown:35,p_skull:30,
-  pu_lat:85,pu_row:25,pu_facepull:30,pu_incurl:22.5,pu_hammer:22.5,pu_preach:20,
-  h_curl:95,h_rdl:25,h_press:85,h_glute:40,h_ext:90,h_calf:90,
-  u_bench:27.5,u_pecdeck:95,u_shpress:27.5,u_cablerow:90,u_lateral:15,u_bisup:22.5,u_pushdown:40,
-  q_ext:90,q_squat:22.5,q_press:80,q_lunges:15,q_calf:90,
-};
-
 // ─── State ────────────────────────────────────────────────────────────────
 const DEFAULT_STATE = {
   weekNum: 1, cycleNum: 1,
@@ -710,7 +702,6 @@ const DEFAULT_STATE = {
   cascadeShifts: {},
   weekOverrides: {},
   sessionData: {},
-  exWeights: {},
   weights_log: [], meals: [],
   cleanDays: {}, streak: 0,
   notes: [], junkNotes: [],
@@ -733,7 +724,6 @@ function loadState() {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) state = { ...DEFAULT_STATE, ...JSON.parse(raw) };
   } catch(e) {}
-  if (!state.exWeights || !Object.keys(state.exWeights).length) state.exWeights = { ...START_W };
   if (!state.milestones || !state.milestones.length) state.milestones = [{ weight:100, date:'2026-08-31', achieved:false, achievedDate:null }];
   if (state.activeMilestoneIdx === undefined) state.activeMilestoneIdx = 0;
   if (!state.startWeight && state.weights_log.length) state.startWeight = [...state.weights_log].sort((a,b)=>a.date.localeCompare(b.date))[0].val;
@@ -822,23 +812,8 @@ function advanceWeek() {
   if (state.weekNum < 3) {
     state.weekNum++;
   } else {
-    Object.keys(state.exWeights).forEach(id => {
-      const ex = findEx(id);
-      if (ex && ex.type==='compound') {
-        const stored = state.exWeights[id];
-        if (stored && typeof stored === 'object') {
-          // New per-set format: add 5 to each set
-          Object.keys(stored).forEach(si => {
-            stored[si] = (parseFloat(stored[si])||0)+5;
-          });
-        } else {
-          // Old single-value format
-          state.exWeights[id] = (parseFloat(stored)||0)+5;
-        }
-      }
-    });
     state.weekNum = 1; state.cycleNum++;
-    alert(`🎉 Cycle complete!\n\nAll compound lifts +5 lbs.\nStarting Cycle ${state.cycleNum}, Week 1.`);
+    alert(`🎉 Cycle complete!\n\nRemember: +5 lbs on compound lifts.\nStarting Cycle ${state.cycleNum}, Week 1.`);
   }
   save(); renderCycleBar(); renderWeekGrid(); renderDayWorkout(selDow);
 }
@@ -1017,15 +992,7 @@ function renderDayWorkout(dow) {
     for (let si=0; si<ex.sets; si++) {
       const sd = getSetD(dateStr, resolved.workoutKey, ex.id, si);
       const target = getRepTarget(ex, si, wkNum);
-      // Support both old format (single number) and new format (object with set indices)
-      let defW = '';
-      const stored = state.exWeights[ex.id];
-      if (stored && typeof stored === 'object') {
-        defW = stored[String(si)] || stored['0'] || '';
-      } else if (stored) {
-        defW = stored; // old single-value format
-      }
-      const displayW = sd.weight || defW;
+      const displayW = sd.weight || '';
       const showW = ex.type!=='core' && ex.type!=='cardio';
       const targetDisp = target!==null ? target : (ex.note||'—');
       html += `<div class="set-row" style="${sd.done?'opacity:.5':''}">
@@ -1076,16 +1043,6 @@ function renderDayWorkout(dow) {
 
 function updateF(dateStr, workoutKey, exId, si, field, val) {
   getSetD(dateStr, workoutKey, exId, si)[field] = val;
-  // Persist weight per set index so top set and back-off can differ
-  if (field === 'weight' && val) {
-    if (!state.exWeights[exId] || typeof state.exWeights[exId] !== 'object') {
-      // Migrate from old single-value format
-      const oldVal = state.exWeights[exId];
-      state.exWeights[exId] = {};
-      if (oldVal) state.exWeights[exId]['0'] = parseFloat(oldVal);
-    }
-    state.exWeights[exId][String(si)] = parseFloat(val);
-  }
   save();
 }
 
@@ -1097,14 +1054,6 @@ function toggleDone(dateStr, workoutKey, exId, si, btn) {
     if (wInput && wInput.dataset.key) {
       const [d, wk, eid, idx] = wInput.dataset.key.split('|');
       getSetD(d, wk, eid, parseInt(idx)).weight = wInput.value;
-      if (wInput.value) {
-        if (!state.exWeights[eid] || typeof state.exWeights[eid] !== 'object') {
-          const oldVal = state.exWeights[eid];
-          state.exWeights[eid] = {};
-          if (oldVal) state.exWeights[eid]['0'] = parseFloat(oldVal);
-        }
-        state.exWeights[eid][idx] = parseFloat(wInput.value);
-      }
     }
     if (rInput && rInput.dataset.key) {
       const [d, wk, eid, idx] = rInput.dataset.key.split('|');
