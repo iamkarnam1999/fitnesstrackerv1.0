@@ -997,9 +997,9 @@ function renderDayWorkout(dow) {
       const targetDisp = target!==null ? target : (ex.note||'—');
       html += `<div class="set-row" style="${sd.done?'opacity:.5':''}">
         <div class="set-label">${getSetLabel(ex,si)}</div>
-        <div>${showW?`<input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
+        <div>${showW?`<input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" oninput="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
         <div class="rep-target">${targetDisp}</div>
-        <div>${ex.type!=='cardio'?`<input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
+        <div>${ex.type!=='cardio'?`<input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" oninput="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)">`:'<div style="text-align:center;color:var(--muted);font-size:10px">—</div>'}</div>
         <div><button class="chk-btn ${sd.done?'done':''}" onclick="toggleDone('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},this)"><svg viewBox="0 0 12 10"><path d="M1 5L4.5 8.5L11 1"/></svg></button></div>
         <div class="set-row-top">
           <span class="set-label">${getSetLabel(ex,si)}</span>
@@ -1007,8 +1007,8 @@ function renderDayWorkout(dow) {
           <button class="chk-btn ${sd.done?'done':''}" onclick="toggleDone('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},this)"><svg viewBox="0 0 12 10"><path d="M1 5L4.5 8.5L11 1"/></svg></button>
         </div>
         <div class="set-row-bottom">
-          ${showW?`<div class="input-group"><label>Weight (lbs)</label><input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)"></div>`:''}
-          ${ex.type!=='cardio'?`<div class="input-group"><label>Actual Reps</label><input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" onchange="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)"></div>`:''}
+          ${showW?`<div class="input-group"><label>Weight (lbs)</label><input class="w-input" type="number" inputmode="decimal" step="2.5" placeholder="—" value="${displayW}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" oninput="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'weight',this.value)"></div>`:''}
+          ${ex.type!=='cardio'?`<div class="input-group"><label>Actual Reps</label><input class="r-input" type="number" inputmode="numeric" placeholder="—" value="${sd.reps||''}" data-key="${dateStr}|${resolved.workoutKey}|${ex.id}|${si}" oninput="updateF('${dateStr}','${resolved.workoutKey}','${ex.id}',${si},'reps',this.value)"></div>`:''}
         </div>
       </div>`;
     }
@@ -1047,25 +1047,52 @@ function updateF(dateStr, workoutKey, exId, si, field, val) {
 }
 
 function toggleDone(dateStr, workoutKey, exId, si, btn) {
-  // Capture all current input values before re-render
-  document.querySelectorAll('.set-row').forEach(row => {
-    const wInput = row.querySelector('.w-input');
-    const rInput = row.querySelector('.r-input');
-    if (wInput && wInput.dataset.key) {
-      const [d, wk, eid, idx] = wInput.dataset.key.split('|');
-      getSetD(d, wk, eid, parseInt(idx)).weight = wInput.value;
-    }
-    if (rInput && rInput.dataset.key) {
-      const [d, wk, eid, idx] = rInput.dataset.key.split('|');
-      getSetD(d, wk, eid, parseInt(idx)).reps = rInput.value;
+  // First, capture ALL current input values on the page into sessionData
+  document.querySelectorAll('[data-key]').forEach(input => {
+    const parts = input.dataset.key.split('|');
+    if (parts.length === 4) {
+      const [d, wk, eid, idx] = parts;
+      const field = input.classList.contains('w-input') ? 'weight' : 'reps';
+      getSetD(d, wk, eid, parseInt(idx))[field] = input.value;
     }
   });
 
+  // Toggle done state
   const sd = getSetD(dateStr, workoutKey, exId, si);
   sd.done = !sd.done;
-  save(); renderWeekGrid();
-  const dow = dowOfDate(dateStr);
-  if (dow === selDow) renderDayWorkout(dow);
+
+  // Update visual state WITHOUT re-rendering
+  btn.classList.toggle('done', sd.done);
+  const row = btn.closest('.set-row');
+  if (row) row.style.opacity = sd.done ? '0.5' : '1';
+
+  // Update the exercise done badge
+  const exBlock = btn.closest('.ex-block');
+  if (exBlock) {
+    const allChks = exBlock.querySelectorAll('.chk-btn');
+    const allDone = Array.from(allChks).every(b => b.classList.contains('done'));
+    const header = exBlock.querySelector('.ex-header');
+    let badge = header.querySelector('.ex-done-badge');
+    if (allDone && !badge) {
+      badge = document.createElement('span');
+      badge.className = 'ex-done-badge';
+      badge.textContent = '✓ Done';
+      header.appendChild(badge);
+    } else if (!allDone && badge) {
+      badge.remove();
+    }
+  }
+
+  // Update progress bar and set count in the card at top
+  const {done, total} = countDone(dateStr);
+  const pct = total ? Math.round(done/total*100) : 0;
+  const progFill = document.querySelector('#dayWorkout .prog-fill');
+  if (progFill) progFill.style.width = pct + '%';
+  const setCount = document.querySelector('#dayWorkout .card div[style*="font-size:10px"]');
+  if (setCount) setCount.textContent = `${done}/${total} sets`;
+
+  save();
+  renderWeekGrid();
 }
 
 function completeWorkout(dateStr) {
