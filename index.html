@@ -1093,6 +1093,24 @@ function toggleDone(dateStr, workoutKey, exId, si, btn) {
 
   save();
   renderWeekGrid();
+
+  // Update complete workout button state
+  const {done: doneCount, total: totalCount} = countDone(dateStr);
+  const allDone = totalCount > 0 && doneCount === totalCount;
+  const logs = state.completedLogs[dateStr] || {};
+  const alreadyCompleted = logs.workout;
+  const completeBtn = document.querySelector('#dayWorkout .complete-btn');
+  const checkItem = document.querySelector('#dayWorkout .complete-check-item');
+  const checkDot = document.querySelector('#dayWorkout .complete-check-item .dot');
+  if (completeBtn && !alreadyCompleted) {
+    completeBtn.className = `complete-btn ${allDone ? 'ready' : 'not-ready'}`;
+    completeBtn.textContent = allDone ? '✅ Mark Workout Complete' : 'Complete all sets first';
+    completeBtn.onclick = allDone ? function(){ completeWorkout(dateStr); } : null;
+  }
+  if (checkItem) {
+    checkItem.className = `complete-check-item ${allDone ? 'met-text' : 'unmet-text'}`;
+    checkItem.innerHTML = `<div class="dot ${allDone ? 'met' : ''}"></div>All sets checked off (${doneCount}/${totalCount})`;
+  }
 }
 
 function completeWorkout(dateStr) {
