@@ -290,6 +290,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<!-- Shift Workout Modal -->
+<div class="modal-overlay" id="shiftModal">
+  <div class="modal">
+    <h3 id="shiftModalTitle">⏩ Shift Workout</h3>
+    <p id="shiftModalDesc"></p>
+    <div class="cascade-preview" id="shiftCascadePreview"></div>
+    <div class="modal-actions" id="shiftModalActions"></div>
+  </div>
+</div>
+
 <header>
   <div class="logo">COACH<span>Mon–Fri Training · Sat Active Rest · Sun Off</span></div>
   <div class="header-right">
@@ -700,8 +710,10 @@ const DEFAULT_STATE = {
   routineStartDate: null,
   dayOverrides: {},
   cascadeShifts: {},
+  weeklyShifts: {},  // tracks shift usage per week: { 'YYYY-MM-DD_week_start': dateUsed }
   weekOverrides: {},
   sessionData: {},
+  weekShiftLog: {}, // tracks which weeks have used the shift: { '2026-05-11': true }
   weights_log: [], meals: [],
   cleanDays: {}, streak: 0,
   notes: [], junkNotes: [],
@@ -1025,6 +1037,21 @@ function renderDayWorkout(dow) {
   // Complete workout section
   const allSetsDone = pct === 100;
   const alreadyDone = logs.workout;
+
+  // Move to Tomorrow section (only for workout days, not rest/cardio)
+  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio' && resolved.workoutKey !== 'cardio_nocore' && !alreadyDone) {
+    const weekMonday = getWeekMondayFor(dateStr);
+    const shiftUsed = state.weekShiftLog && state.weekShiftLog[weekMonday];
+    html += `<div style="margin-top:10px;margin-bottom:4px">
+      <button class="btn secondary" style="width:100%;font-size:12px;padding:11px" onclick="moveToTomorrow('${dateStr}')">
+        ⏭️ Move to Tomorrow
+      </button>
+    </div>`;
+    if (shiftUsed) {
+      html += `<div style="font-size:9px;color:var(--red);text-align:center;margin-top:4px">⚠️ Already used this week — next attempt will be blocked</div>`;
+    }
+  }
+
   html += `<div class="complete-section">
     <h3>Complete Workout</h3>
     <div class="complete-checklist">
@@ -1044,6 +1071,107 @@ function renderDayWorkout(dow) {
 function updateF(dateStr, workoutKey, exId, si, field, val) {
   getSetD(dateStr, workoutKey, exId, si)[field] = val;
   save();
+}
+
+function getWeekMondayFor(dateStr) {
+  const dow = dowOfDate(dateStr);
+  const offset = dow === 0 ? -6 : 1 - dow;
+  return addDays(dateStr, offset);
+}
+
+function moveToTomorrow(dateStr) {
+  const weekMonday = getWeekMondayFor(dateStr);
+  if (!state.weekShiftLog) state.weekShiftLog = {};
+
+  // Check if already used this week
+  if (state.weekShiftLog[weekMonday]) {
+    // Second attempt — block it
+    const msgs = [
+      "🚫 Do NOT skip today. Go to the Gym, NOW!!!",
+      "🚫 You already moved a workout this week. No more excuses!",
+      "🚫 GET UP. Go to the Gym. NOW!!!",
+      "🚫 One skip per week is a system adjustment. Two is a pattern. GO!"
+    ];
+    const msg = msgs[Math.floor(Math.random() * msgs.length)];
+    alert(msg);
+    return;
+  }
+
+  const resolved = resolveDay(dateStr);
+  if (resolved.workoutKey === 'rest' || resolved.workoutKey === 'cardio' || resolved.workoutKey === 'cardio_nocore') return;
+
+  const tomorrow = addDays(dateStr, 1);
+  const tomorrowResolved = resolveDay(tomorrow);
+
+  // Build cascade: shift today's workout and everything after it forward by 1
+  // Today becomes rest, tomorrow gets today's workout, etc.
+  let shifts = [];
+  let currentWorkout = resolved.workoutKey;
+  let currentDate = dateStr;
+
+  // Find how many days to cascade (until we hit rest day or end of week)
+  for (let i = 0; i < 7; i++) {
+    const nextDate = addDays(currentDate, 1);
+    const nextResolved = resolveDay(nextDate);
+    const nextWorkout = nextResolved.workoutKey;
+
+    shifts.push({ date: nextDate, workout: currentWorkout });
+
+    // Stop if next day is rest or active rest — that absorbs the shift
+    if (nextWorkout === 'rest' || nextWorkout === 'cardio' || nextWorkout === 'cardio_nocore') {
+      break;
+    }
+
+    currentWorkout = nextWorkout;
+    currentDate = nextDate;
+  }
+
+  // Build confirmation modal
+  let previewHTML = `<div class="cascade-row"><span class="cascade-day">${fmtDate(dateStr)}</span><span class="cascade-from">${WORKOUT_DEFS[resolved.workoutKey]?.name.split('—')[0].trim()}</span><span class="cascade-arrow">→</span><span class="cascade-to" style="color:var(--red)">REST</span></div>`;
+  shifts.forEach(s => {
+    const wk = WORKOUT_DEFS[s.workout];
+    const origResolved = resolveDay(s.date);
+    previewHTML += `<div class="cascade-row">
+      <span class="cascade-day">${fmtDate(s.date)}</span>
+      <span class="cascade-from">${origResolved.label || '—'}</span>
+      <span class="cascade-arrow">→</span>
+      <span class="cascade-to">${wk ? wk.name.split('—')[0].trim() : s.workout}</span>
+    </div>`;
+  });
+
+  document.getElementById('shiftModalTitle').textContent = '⏩ Shift Workout';
+  document.getElementById('shiftModalDesc').textContent = `Move today's workout to tomorrow. Everything else shifts forward. You can only do this ONCE per week.`;
+  document.getElementById('shiftCascadePreview').innerHTML = previewHTML;
+  document.getElementById('shiftCascadePreview').style.display = 'block';
+  document.getElementById('shiftModalActions').innerHTML = `
+    <button class="btn" style="background:var(--accent2)" onclick="confirmShift('${dateStr}', ${JSON.stringify(shifts).split('"').join("'")}, '${weekMonday}')">⏭️ Move to Tomorrow</button>
+    <button class="btn secondary" onclick="closeShiftModal()">Cancel</button>
+  `;
+  document.getElementById('shiftModal').classList.add('show');
+}
+
+function closeShiftModal() {
+  document.getElementById('shiftModal').classList.remove('show');
+}
+
+function confirmShift(dateStr, shifts, weekMonday) {
+  closeShiftModal();
+
+  // Apply: today becomes rest
+  state.dayOverrides[dateStr] = 'rest';
+
+  // Apply cascade shifts
+  shifts.forEach(s => {
+    state.cascadeShifts[s.date] = s.workout;
+  });
+
+  // Mark this week as shift-used
+  if (!state.weekShiftLog) state.weekShiftLog = {};
+  state.weekShiftLog[weekMonday] = true;
+
+  save();
+  renderAll();
+  showToast('⏭️ Workout moved to tomorrow', 'orange', 3000);
 }
 
 function toggleDone(dateStr, workoutKey, exId, si, btn) {
