@@ -723,7 +723,8 @@ const DEFAULT_STATE = {
   startWeight: null,
   graphRange: 0,
   weeklyCalAdjust: 0,
-  weeklyProtAdjust: 0
+  weeklyProtAdjust: 0,
+  shiftUsedDates: []  // tracks which week-start dates have used a shift
 };
 
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -959,6 +960,90 @@ function getSetLabel(ex, si) {
   return `Set ${si+1}`;
 }
 
+// ─── Shift Day Logic ──────────────────────────────────────────────────────
+function getWeekStartForDate(dateStr) {
+  const p = dateStr.split('-');
+  const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+  const dow = d.getDay();
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diffToMon);
+  return localDateStr(d);
+}
+
+function hasUsedShiftThisWeek(dateStr) {
+  const weekStart = getWeekStartForDate(dateStr);
+  return (state.shiftUsedDates || []).includes(weekStart);
+}
+
+function shiftWorkout(dateStr) {
+  const weekStart = getWeekStartForDate(dateStr);
+
+  // Check if shift already used this week
+  if (hasUsedShiftThisWeek(dateStr)) {
+    showToast('Go to the Gym, NOW!!! 💪', 'red', 3000);
+    return;
+  }
+
+  const resolved = resolveDay(dateStr);
+  if (resolved.type === 'rest' || resolved.workoutKey === 'rest') {
+    showToast('Today is already a rest day', 'orange');
+    return;
+  }
+
+  // Build cascade: shift this day's workout and all following workouts forward by 1
+  const shifts = [];
+  let currentDate = dateStr;
+  let shiftWorkoutKey = resolved.workoutKey;
+
+  for (let i = 0; i < 7; i++) {
+    const nextDate = addDays(currentDate, 1);
+    const nextResolved = resolveDay(nextDate);
+
+    shifts.push({ date: nextDate, workoutKey: shiftWorkoutKey });
+
+    // If next day is rest (Sunday), stop — don't shift past rest day
+    if (nextResolved.type === 'rest' || nextResolved.workoutKey === 'rest') {
+      break;
+    }
+
+    // If next day is active rest (cardio), we can push into it but stop after
+    if (nextResolved.workoutKey === 'cardio_nocore' || nextResolved.workoutKey === 'cardio') {
+      shifts.push({ date: addDays(nextDate, 1), workoutKey: nextResolved.workoutKey });
+      break;
+    }
+
+    shiftWorkoutKey = nextResolved.workoutKey;
+    currentDate = nextDate;
+  }
+
+  // Show confirmation
+  let msg = `Skip today and shift workouts forward?\n\n`;
+  msg += `${fmtDate(dateStr)}: ${WORKOUT_DEFS[resolved.workoutKey]?.name.split('—')[0].trim()} → REST\n`;
+  shifts.forEach(s => {
+    const origResolved = resolveDay(s.date);
+    const origLabel = origResolved.type === 'rest' ? 'REST' : (WORKOUT_DEFS[origResolved.workoutKey]?.name.split('—')[0].trim() || origResolved.label);
+    const newLabel = WORKOUT_DEFS[s.workoutKey]?.name.split('—')[0].trim() || s.workoutKey;
+    msg += `${fmtDate(s.date)}: ${origLabel} → ${newLabel}\n`;
+  });
+  msg += `\n⚠️ You can only use this once per week.`;
+
+  if (!confirm(msg)) return;
+
+  // Apply shifts
+  state.dayOverrides[dateStr] = 'rest';
+  shifts.forEach(s => {
+    state.cascadeShifts[s.date] = s.workoutKey;
+  });
+
+  // Mark shift as used for this week
+  if (!state.shiftUsedDates) state.shiftUsedDates = [];
+  state.shiftUsedDates.push(weekStart);
+
+  save();
+  renderAll();
+  showToast('📅 Workout shifted to tomorrow', 'orange', 2500);
+}
+
 function renderDayWorkout(dow) {
   const dateStr = getDateForDow(dow);
   const resolved = resolveDay(dateStr);
@@ -978,12 +1063,22 @@ function renderDayWorkout(dow) {
     ${state.cascadeShifts[dateStr] ? '<div style="font-size:11px;color:var(--accent2);margin-top:6px">⚡ Workout shifted here from previous day</div>' : ''}
   </div>`;
 
+  // Shift Day button — only show for workout days that aren't already completed or shifted to rest
+  if (resolved.type === 'workout' && resolved.workoutKey !== 'rest' && !logs.workout) {
+    const shiftUsed = hasUsedShiftThisWeek(dateStr);
+    const shiftLabel = shiftUsed ? '⚠️ Shift already used this week' : '📅 Skip & Shift to Tomorrow';
+    const shiftStyle = shiftUsed
+      ? 'background:var(--surface2);color:var(--muted);border:1px solid var(--border);cursor:pointer'
+      : 'background:rgba(241,169,53,.1);color:var(--accent2);border:1px solid rgba(241,169,53,.3);cursor:pointer';
+    html += `<button style="${shiftStyle};width:100%;padding:10px;border-radius:9px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;margin-bottom:11px;-webkit-tap-highlight-color:transparent" onclick="shiftWorkout('${dateStr}')">${shiftLabel}</button>`;
+  }
+
   if (pct===100 || logs.workout) {
     html += `<div style="text-align:center;padding:11px;color:var(--accent);font-weight:600;font-size:13px;background:var(--surface);border-radius:11px;margin-bottom:11px;border:1px solid var(--border)">🎉 Session complete!</div>`;
   }
 
   // Post-workout cardio reminder for workout days (not rest, not cardio-only)
-  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio') {
+  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio' && resolved.workoutKey !== 'cardio_nocore') {
     html += `<div style="background:rgba(91,142,240,.08);border:1px solid rgba(91,142,240,.25);border-radius:9px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--blue)">🚶 <strong>Post-workout cardio:</strong> Incline treadmill ~5% incline, 3.0 kmph, 20 min</div>`;
   }
 
