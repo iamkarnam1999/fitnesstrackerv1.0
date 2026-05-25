@@ -301,7 +301,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <header>
-  <div class="logo">COACH<span>Mon–Fri Training · Sat Active Rest · Sun Off</span></div>
+  <div class="logo">COACH<span>Mon–Sat Training · Sun Rest</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -621,9 +621,9 @@ const BASE_SCHEDULE = {
   1:{name:'Mon',label:'PUSH',              type:'workout', workoutKey:'push'},
   2:{name:'Tue',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
   3:{name:'Wed',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
-  4:{name:'Thu',label:'UPPER + Core',      type:'workout', workoutKey:'upper_core'},
-  5:{name:'Fri',label:'LOWER',             type:'workout', workoutKey:'legs_quad_nocore'},
-  6:{name:'Sat',label:'Active Rest',       type:'workout', workoutKey:'cardio_nocore'}
+  4:{name:'Thu',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
+  5:{name:'Fri',label:'UPPER',             type:'workout', workoutKey:'upper'},
+  6:{name:'Sat',label:'LOWER + Core',      type:'workout', workoutKey:'legs_quad'}
 };
 
 const CORE_EX = (pfx) => [
@@ -781,7 +781,8 @@ function resolveDay(dateStr) {
   }
   // Check dayOverrides
   if (state.dayOverrides[dateStr] === 'rest') {
-    return { label: 'REST', type: 'rest', workoutKey: 'rest' };
+    const origKey = state.shiftedFromWorkout?.[dateStr];
+    return { label: 'REST (Shifted)', type: 'rest', workoutKey: 'rest', shiftedFrom: origKey || null };
   }
   if (state.dayOverrides[dateStr]) {
     const wk = state.dayOverrides[dateStr];
@@ -886,22 +887,25 @@ function renderWeekGrid() {
   weekNav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
   const weekLabel = weekOffset === 0 ? 'This Week' : weekOffset === 1 ? 'Next Week' : weekOffset === -1 ? 'Last Week' : `${weekOffset > 0 ? '+' : ''}${weekOffset} weeks`;
   weekNav.innerHTML = `
-    <button class="btn secondary sm" onclick="weekOffset--;renderWeekGrid();if(weekOffset===0)renderDayWorkout(selDow)">‹ Prev</button>
+    <button class="btn secondary sm" onclick="weekOffset--;renderWeekGrid();renderDayWorkout(selDow)">‹ Prev</button>
     <div style="text-align:center">
       <div style="font-weight:600;font-size:12px">${weekLabel}</div>
       <div style="font-size:10px;color:var(--muted)">${fmtDate(weekStartDate)} – ${fmtDate(addDays(weekStartDate, 6))}</div>
     </div>
-    <button class="btn secondary sm" onclick="weekOffset++;renderWeekGrid();if(weekOffset===0)renderDayWorkout(selDow)">Next ›</button>
+    <button class="btn secondary sm" onclick="weekOffset++;renderWeekGrid();renderDayWorkout(selDow)">Next ›</button>
   `;
   grid.parentNode.insertBefore(weekNav, grid);
 
   // Schedule indicator
   const hasOverrides = Object.keys(state.dayOverrides).some(k => k >= weekStartDate && k <= addDays(weekStartDate, 6));
+  const hasShifts = Object.keys(state.cascadeShifts || {}).some(k => k >= weekStartDate && k <= addDays(weekStartDate, 6));
   const indicator = document.createElement('div');
   indicator.id = 'scheduleIndicator';
   indicator.style.cssText = 'font-size:10px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px';
-  if (hasOverrides) {
-    indicator.innerHTML = '<span style="background:rgba(241,169,53,.15);color:var(--accent2);padding:2px 8px;border-radius:20px;font-weight:600;font-size:9px">WEEK 1</span> Modified schedule active — reverts to normal next week';
+  if (hasShifts) {
+    indicator.innerHTML = '<span style="background:rgba(241,169,53,.15);color:var(--accent2);padding:2px 8px;border-radius:20px;font-weight:600;font-size:9px">SHIFTED</span> Workout shifted — schedule adjusted';
+  } else if (hasOverrides) {
+    indicator.innerHTML = '<span style="background:rgba(241,169,53,.15);color:var(--accent2);padding:2px 8px;border-radius:20px;font-weight:600;font-size:9px">MODIFIED</span> Schedule modified this week';
   } else {
     indicator.innerHTML = '<span style="background:rgba(200,241,53,.1);color:var(--accent);padding:2px 8px;border-radius:20px;font-weight:600;font-size:9px">STANDARD</span> Mon–Sat routine';
   }
@@ -917,7 +921,13 @@ function getWeekForDate(dateStr) {
 function sessKey(dateStr, workoutKey) { return `${dateStr}_${workoutKey}`; }
 
 function getDateForDow(dow) {
-  const d = new Date(); d.setDate(d.getDate() - d.getDay() + dow);
+  const d = new Date();
+  const currentDay = d.getDay();
+  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
+  d.setDate(d.getDate() + diffToMon + (weekOffset * 7));
+  // d is now Monday of the target week, add days to reach the desired dow
+  const daysFromMon = dow === 0 ? 6 : dow - 1; // Mon=0, Tue=1, ... Sun=6
+  d.setDate(d.getDate() + daysFromMon);
   return localDateStr(d);
 }
 
@@ -994,21 +1004,22 @@ function shiftWorkout(dateStr) {
   const shifts = [];
   let currentDate = dateStr;
   let shiftWorkoutKey = resolved.workoutKey;
+  let droppedWorkout = null;
 
   for (let i = 0; i < 7; i++) {
     const nextDate = addDays(currentDate, 1);
     const nextResolved = resolveDay(nextDate);
 
-    shifts.push({ date: nextDate, workoutKey: shiftWorkoutKey });
-
-    // If next day is rest (Sunday), stop — don't shift past rest day
+    // If next day is rest (Sunday), DON'T push into it — drop the workout
     if (nextResolved.type === 'rest' || nextResolved.workoutKey === 'rest') {
+      droppedWorkout = shiftWorkoutKey;
       break;
     }
 
-    // If next day is active rest (cardio), we can push into it but stop after
+    shifts.push({ date: nextDate, workoutKey: shiftWorkoutKey });
+
+    // If next day is active rest (cardio), absorb it and stop
     if (nextResolved.workoutKey === 'cardio_nocore' || nextResolved.workoutKey === 'cardio') {
-      shifts.push({ date: addDays(nextDate, 1), workoutKey: nextResolved.workoutKey });
       break;
     }
 
@@ -1025,11 +1036,17 @@ function shiftWorkout(dateStr) {
     const newLabel = WORKOUT_DEFS[s.workoutKey]?.name.split('—')[0].trim() || s.workoutKey;
     msg += `${fmtDate(s.date)}: ${origLabel} → ${newLabel}\n`;
   });
-  msg += `\n⚠️ You can only use this once per week.`;
+  if (droppedWorkout) {
+    msg += `\n⚠️ ${WORKOUT_DEFS[droppedWorkout]?.name.split('—')[0].trim()} will be dropped this week (can't push past Sunday rest).`;
+  }
+  msg += `\n\n⚠️ You can only use this once per week.`;
 
   if (!confirm(msg)) return;
 
   // Apply shifts
+  // Store the original workout key so we can show session data even on a rest-overridden day
+  if (!state.shiftedFromWorkout) state.shiftedFromWorkout = {};
+  state.shiftedFromWorkout[dateStr] = resolved.workoutKey;
   state.dayOverrides[dateStr] = 'rest';
   shifts.forEach(s => {
     state.cascadeShifts[s.date] = s.workoutKey;
@@ -1059,9 +1076,44 @@ function renderDayWorkout(dow) {
       <div style="font-size:10px;color:var(--muted)">${done}/${total} sets</div>
     </div>
     <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-    ${state.dayOverrides[dateStr]==='rest' ? '<div style="font-size:11px;color:var(--red);margin-top:6px">🔴 Hard Reset applied — rest day</div>' : ''}
+    ${state.dayOverrides[dateStr]==='rest' && resolved.shiftedFrom ? '<div style="font-size:11px;color:var(--accent2);margin-top:6px">📅 Workout shifted to next day</div>' : ''}
+    ${state.dayOverrides[dateStr]==='rest' && !resolved.shiftedFrom ? '<div style="font-size:11px;color:var(--red);margin-top:6px">🔴 Hard Reset applied — rest day</div>' : ''}
     ${state.cascadeShifts[dateStr] ? '<div style="font-size:11px;color:var(--accent2);margin-top:6px">⚡ Workout shifted here from previous day</div>' : ''}
   </div>`;
+
+  // Show original session data for shifted days (read-only reference)
+  if (resolved.shiftedFrom) {
+    const origWkDef = WORKOUT_DEFS[resolved.shiftedFrom];
+    const origSessKey = sessKey(dateStr, resolved.shiftedFrom);
+    const origSessData = state.sessionData[origSessKey];
+    if (origWkDef && origSessData && Object.keys(origSessData).length > 0) {
+      html += `<div class="card" style="padding:11px 13px;margin-bottom:11px;opacity:0.6">
+        <h3 style="margin-bottom:8px">📋 Original session data (${origWkDef.name.split('—')[0].trim()})</h3>`;
+      origWkDef.exercises.forEach(ex => {
+        if (ex.type === 'core' || ex.type === 'cardio') return;
+        const exData = origSessData[ex.id];
+        if (!exData) return;
+        let hasData = false;
+        let rows = '';
+        for (let si = 0; si < ex.sets; si++) {
+          const sd = exData[si];
+          if (sd && (sd.weight || sd.reps)) {
+            hasData = true;
+            rows += `<div style="display:flex;gap:12px;font-size:11px;padding:3px 0">
+              <span style="color:var(--muted);width:60px">${si===0?'Top Set':'Back-off'}</span>
+              <span>${sd.weight || '—'} lbs</span>
+              <span>${sd.reps || '—'} reps</span>
+              <span>${sd.done ? '✓' : ''}</span>
+            </div>`;
+          }
+        }
+        if (hasData) {
+          html += `<div style="margin-bottom:6px"><div style="font-weight:600;font-size:12px;margin-bottom:2px">${ex.name}</div>${rows}</div>`;
+        }
+      });
+      html += `</div>`;
+    }
+  }
 
   // Shift Day button — only show for workout days that aren't already completed or shifted to rest
   if (resolved.type === 'workout' && resolved.workoutKey !== 'rest' && !logs.workout) {
