@@ -301,7 +301,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <header>
-  <div class="logo">COACH<span>Mon–Sat Training · Sun Rest</span></div>
+  <div class="logo">COACH<span>Mon–Fri Training · Sat Rest · Sun Active Rest</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -612,18 +612,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────
-const STORE_KEY = 'coach-fitness-v9';
+const STORE_KEY = 'coach-fitness-v10';
 const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'REST',              type:'rest',    workoutKey:'rest'},
-  1:{name:'Mon',label:'PUSH',              type:'workout', workoutKey:'push'},
-  2:{name:'Tue',label:'PULL + Core',       type:'workout', workoutKey:'pull'},
-  3:{name:'Wed',label:'HAM',               type:'workout', workoutKey:'legs_ham'},
-  4:{name:'Thu',label:'Active Rest + Core', type:'workout', workoutKey:'cardio'},
-  5:{name:'Fri',label:'UPPER',             type:'workout', workoutKey:'upper'},
-  6:{name:'Sat',label:'LOWER + Core',      type:'workout', workoutKey:'legs_quad'}
+  0:{name:'Sun',label:'Active Rest',      type:'workout', workoutKey:'active_rest'},
+  1:{name:'Mon',label:'PUSH + Core',      type:'workout', workoutKey:'push'},
+  2:{name:'Tue',label:'PULL',             type:'workout', workoutKey:'pull'},
+  3:{name:'Wed',label:'HAM/GLUTE + Core', type:'workout', workoutKey:'legs_ham'},
+  4:{name:'Thu',label:'UPPER',            type:'workout', workoutKey:'upper'},
+  5:{name:'Fri',label:'QUAD + Core',      type:'workout', workoutKey:'legs_quad'},
+  6:{name:'Sat',label:'REST',             type:'rest',    workoutKey:'rest'}
 };
 
 const CORE_EX = (pfx) => [
@@ -631,75 +631,55 @@ const CORE_EX = (pfx) => [
 ];
 
 const WORKOUT_DEFS = {
-  push:{name:'Push Day — Chest · Shoulders · Triceps', exercises:[
+  push:{name:'Push — Chest · Shoulders · Triceps · Core', exercises:[
     {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_shpress',  name:'DB Shoulder Press',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'p_lateral',  name:'Cable Lateral Raises',      type:'isolation', sets:3, reps:[10,12,15]},
+    {id:'p_lateral',  name:'Cable Lateral Raises',       type:'isolation', sets:3, reps:[10,12,15]},
     {id:'p_pushdown', name:'Rope Tricep Pushdown',       type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_skull',    name:'DB Tricep Skullcrushers',    type:'isolation', sets:3, reps:[12,13,15]},
+    ...CORE_EX('p')
   ]},
-  pull:{name:'Pull Day — Back · Biceps · Core', exercises:[
-    {id:'pu_lat',      name:'Lat Pulldown',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'pu_row',      name:'DB Bent-Over Row',     type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'pu_facepull', name:'Rope Face Pull',       type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt + external rotators'},
-    {id:'pu_incurl',   name:'Seated Incline Curl',  type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
-    {id:'pu_hammer',   name:'Hammer Curl',          type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'pu_preach',   name:'Preacher Curl',        type:'isolation', sets:3, reps:[10,12,15], note:'Short head bicep'},
-    ...CORE_EX('pu')
+  pull:{name:'Pull — Back · Biceps · Rear Delt', exercises:[
+    {id:'pu_lat',      name:'Lat Pulldown',            type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'pu_row',      name:'DB Bent Over Row',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'pu_facepull', name:'Rope Face Pull',          type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt + external rotators'},
+    {id:'pu_incurl',   name:'DB Seated Incline Curl',  type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
+    {id:'pu_hammer',   name:'DB Hammer Curl',          type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'pu_preach',   name:'DB Preacher Curl',        type:'isolation', sets:3, reps:[10,12,15]},
   ]},
-  legs_ham:{name:'Legs — Hamstring Focus', exercises:[
-    {id:'h_curl',    name:'Lying Hamstring Curl',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+  legs_ham:{name:'Legs — Ham/Glute · Adductors · Core', exercises:[
+    {id:'h_curl',    name:'Seated Hamstring Curl',  type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'h_rdl',     name:'RDL',                    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'h_press',   name:'Leg Press (heels high)', type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'h_glute',   name:'Barbell Glute Bridge',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'h_ext',     name:'Leg Extensions',         type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'h_adduct',  name:'Machine Adductors',      type:'isolation', sets:3, reps:[12,13,15]},
     {id:'h_calf',    name:'Calf Raise Machine',     type:'isolation', sets:3, reps:[12,13,15]},
+    ...CORE_EX('h')
   ]},
-  cardio:{name:'Active Rest — 30 min Incline Walk + Core', exercises:[
-    {id:'c_walk',    name:'🚶 Incline Treadmill Walk', type:'cardio', sets:1, reps:[null], note:'30 min, ~5% incline, 3.0 kmph'},
-    ...CORE_EX('c')
-  ]},
-  cardio_nocore:{name:'Active Rest — 30 min Incline Walk', exercises:[
-    {id:'c_walk',    name:'🚶 Incline Treadmill Walk', type:'cardio', sets:1, reps:[null], note:'30 min, ~5% incline, 3.0 kmph'},
-  ]},
-  upper:{name:'Upper Body — Chest · Shoulders · Back · Arms', exercises:[
+  upper:{name:'Upper Body — Full Upper · All Groups', exercises:[
     {id:'u_bench',    name:'Barbell Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'u_pecdeck',  name:'Pec Deck Machine',       type:'isolation', sets:3, reps:[12,13,15]},
     {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_lateral',  name:'Lateral Raises',         type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'u_lateral',  name:'Cable Lateral Raise',    type:'isolation', sets:3, reps:[12,13,15]},
     {id:'u_cablerow', name:'Cable Row',              type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_bisup',    name:'Biceps Superset',        type:'isolation', sets:3, reps:[12,13,15], note:'Incline+Hammer Curl'},
+    {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt'},
+    {id:'u_bisup',    name:'Bicep Superset',         type:'isolation', sets:3, reps:[12,13,15], note:'Incline Curl + Hammer Curl'},
     {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
   ]},
-  legs_quad:{name:'Lower Body — Quad Focus + Core', exercises:[
-    {id:'q_ext',    name:'Leg Extensions',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_squat',  name:'Smith Machine Squat', type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_press',  name:'Leg Press',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_lunges', name:'Walking DB Lunges',   type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
-    {id:'q_calf',   name:'Calf Raises',         type:'isolation', sets:3, reps:[12,13,15]},
+  legs_quad:{name:'Legs — Quad · Glutes · Calves · Core', exercises:[
+    {id:'q_ext',    name:'Leg Extensions',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_squat',  name:'Smith Machine Squats',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_press',  name:'Leg Press (quad focus)',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_lunges', name:'Walking DB Lunges',        type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
+    {id:'q_calf',   name:'Calf Raise Machine',       type:'isolation', sets:3, reps:[12,13,15]},
     ...CORE_EX('q')
   ]},
-  // Week 1 only variants
-  upper_core:{name:'Upper Body — Chest · Shoulders · Back · Arms · Core', exercises:[
-    {id:'u_bench',    name:'Barbell Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_lateral',  name:'Lateral Raises',         type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'u_cablerow', name:'Cable Row',              type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_bisup',    name:'Biceps Superset',        type:'isolation', sets:3, reps:[12,13,15], note:'Incline+Hammer Curl'},
-    {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
-    ...CORE_EX('u')
-  ]},
-  legs_quad_nocore:{name:'Lower Body — Quad Focus', exercises:[
-    {id:'q_ext',    name:'Leg Extensions',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_squat',  name:'Smith Machine Squat', type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_press',  name:'Leg Press',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_lunges', name:'Walking DB Lunges',   type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
-    {id:'q_calf',   name:'Calf Raises',         type:'isolation', sets:3, reps:[12,13,15]},
+  active_rest:{name:'Active Rest — Light Movement Only', exercises:[
+    {id:'ar_walk', name:'🚶 Walk, Stretch, Mobility', type:'cardio', sets:1, reps:[null], note:'No lifting. Light movement only.'},
   ]},
   rest:{name:'Complete Rest Day 😴', exercises:[
-    {id:'rest_day', name:'Rest & Recover', type:'cardio', sets:1, reps:[null], note:'No gym. Eat well, hydrate, sleep.'}
+    {id:'rest_day', name:'Rest & Recover', type:'cardio', sets:1, reps:[null], note:'No training. Sleep, eat, recover.'}
   ]}
 };
 
@@ -710,10 +690,10 @@ const DEFAULT_STATE = {
   routineStartDate: null,
   dayOverrides: {},
   cascadeShifts: {},
-  weeklyShifts: {},  // tracks shift usage per week: { 'YYYY-MM-DD_week_start': dateUsed }
+  shiftedFromWorkout: {},
   weekOverrides: {},
   sessionData: {},
-  weekShiftLog: {}, // tracks which weeks have used the shift: { '2026-05-11': true }
+  weekShiftLog: {},
   weights_log: [], meals: [],
   cleanDays: {}, streak: 0,
   notes: [], junkNotes: [],
@@ -723,8 +703,7 @@ const DEFAULT_STATE = {
   startWeight: null,
   graphRange: 0,
   weeklyCalAdjust: 0,
-  weeklyProtAdjust: 0,
-  shiftUsedDates: []  // tracks which week-start dates have used a shift
+  weeklyProtAdjust: 0
 };
 
 let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -971,96 +950,6 @@ function getSetLabel(ex, si) {
 }
 
 // ─── Shift Day Logic ──────────────────────────────────────────────────────
-function getWeekStartForDate(dateStr) {
-  const p = dateStr.split('-');
-  const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
-  const dow = d.getDay();
-  const diffToMon = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diffToMon);
-  return localDateStr(d);
-}
-
-function hasUsedShiftThisWeek(dateStr) {
-  const weekStart = getWeekStartForDate(dateStr);
-  return (state.shiftUsedDates || []).includes(weekStart);
-}
-
-function shiftWorkout(dateStr) {
-  const weekStart = getWeekStartForDate(dateStr);
-
-  // Check if shift already used this week
-  if (hasUsedShiftThisWeek(dateStr)) {
-    showToast('Go to the Gym, NOW!!! 💪', 'red', 3000);
-    return;
-  }
-
-  const resolved = resolveDay(dateStr);
-  if (resolved.type === 'rest' || resolved.workoutKey === 'rest') {
-    showToast('Today is already a rest day', 'orange');
-    return;
-  }
-
-  // Build cascade: shift this day's workout and all following workouts forward by 1
-  const shifts = [];
-  let currentDate = dateStr;
-  let shiftWorkoutKey = resolved.workoutKey;
-  let droppedWorkout = null;
-
-  for (let i = 0; i < 7; i++) {
-    const nextDate = addDays(currentDate, 1);
-    const nextResolved = resolveDay(nextDate);
-
-    // If next day is rest (Sunday), DON'T push into it — drop the workout
-    if (nextResolved.type === 'rest' || nextResolved.workoutKey === 'rest') {
-      droppedWorkout = shiftWorkoutKey;
-      break;
-    }
-
-    shifts.push({ date: nextDate, workoutKey: shiftWorkoutKey });
-
-    // If next day is active rest (cardio), absorb it and stop
-    if (nextResolved.workoutKey === 'cardio_nocore' || nextResolved.workoutKey === 'cardio') {
-      break;
-    }
-
-    shiftWorkoutKey = nextResolved.workoutKey;
-    currentDate = nextDate;
-  }
-
-  // Show confirmation
-  let msg = `Skip today and shift workouts forward?\n\n`;
-  msg += `${fmtDate(dateStr)}: ${WORKOUT_DEFS[resolved.workoutKey]?.name.split('—')[0].trim()} → REST\n`;
-  shifts.forEach(s => {
-    const origResolved = resolveDay(s.date);
-    const origLabel = origResolved.type === 'rest' ? 'REST' : (WORKOUT_DEFS[origResolved.workoutKey]?.name.split('—')[0].trim() || origResolved.label);
-    const newLabel = WORKOUT_DEFS[s.workoutKey]?.name.split('—')[0].trim() || s.workoutKey;
-    msg += `${fmtDate(s.date)}: ${origLabel} → ${newLabel}\n`;
-  });
-  if (droppedWorkout) {
-    msg += `\n⚠️ ${WORKOUT_DEFS[droppedWorkout]?.name.split('—')[0].trim()} will be dropped this week (can't push past Sunday rest).`;
-  }
-  msg += `\n\n⚠️ You can only use this once per week.`;
-
-  if (!confirm(msg)) return;
-
-  // Apply shifts
-  // Store the original workout key so we can show session data even on a rest-overridden day
-  if (!state.shiftedFromWorkout) state.shiftedFromWorkout = {};
-  state.shiftedFromWorkout[dateStr] = resolved.workoutKey;
-  state.dayOverrides[dateStr] = 'rest';
-  shifts.forEach(s => {
-    state.cascadeShifts[s.date] = s.workoutKey;
-  });
-
-  // Mark shift as used for this week
-  if (!state.shiftUsedDates) state.shiftUsedDates = [];
-  state.shiftUsedDates.push(weekStart);
-
-  save();
-  renderAll();
-  showToast('📅 Workout shifted to tomorrow', 'orange', 2500);
-}
-
 function renderDayWorkout(dow) {
   const dateStr = getDateForDow(dow);
   const resolved = resolveDay(dateStr);
@@ -1115,22 +1004,12 @@ function renderDayWorkout(dow) {
     }
   }
 
-  // Shift Day button — only show for workout days that aren't already completed or shifted to rest
-  if (resolved.type === 'workout' && resolved.workoutKey !== 'rest' && !logs.workout) {
-    const shiftUsed = hasUsedShiftThisWeek(dateStr);
-    const shiftLabel = shiftUsed ? '⚠️ Shift already used this week' : '📅 Skip & Shift to Tomorrow';
-    const shiftStyle = shiftUsed
-      ? 'background:var(--surface2);color:var(--muted);border:1px solid var(--border);cursor:pointer'
-      : 'background:rgba(241,169,53,.1);color:var(--accent2);border:1px solid rgba(241,169,53,.3);cursor:pointer';
-    html += `<button style="${shiftStyle};width:100%;padding:10px;border-radius:9px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;margin-bottom:11px;-webkit-tap-highlight-color:transparent" onclick="shiftWorkout('${dateStr}')">${shiftLabel}</button>`;
-  }
-
   if (pct===100 || logs.workout) {
     html += `<div style="text-align:center;padding:11px;color:var(--accent);font-weight:600;font-size:13px;background:var(--surface);border-radius:11px;margin-bottom:11px;border:1px solid var(--border)">🎉 Session complete!</div>`;
   }
 
   // Post-workout cardio reminder for workout days (not rest, not cardio-only)
-  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio' && resolved.workoutKey !== 'cardio_nocore') {
+  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio' && resolved.workoutKey !== 'cardio_nocore' && resolved.workoutKey !== 'active_rest') {
     html += `<div style="background:rgba(91,142,240,.08);border:1px solid rgba(91,142,240,.25);border-radius:9px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--blue)">🚶 <strong>Post-workout cardio:</strong> Incline treadmill ~5% incline, 3.0 kmph, 20 min</div>`;
   }
 
@@ -1186,7 +1065,7 @@ function renderDayWorkout(dow) {
   const alreadyDone = logs.workout;
 
   // Move to Tomorrow section (only for workout days, not rest/cardio)
-  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio' && resolved.workoutKey !== 'cardio_nocore' && !alreadyDone) {
+  if (resolved.workoutKey !== 'rest' && resolved.workoutKey !== 'cardio' && resolved.workoutKey !== 'cardio_nocore' && resolved.workoutKey !== 'active_rest' && !alreadyDone) {
     const weekMonday = getWeekMondayFor(dateStr);
     const shiftUsed = state.weekShiftLog && state.weekShiftLog[weekMonday];
     html += `<div style="margin-top:10px;margin-bottom:4px">
@@ -1245,7 +1124,7 @@ function moveToTomorrow(dateStr) {
   }
 
   const resolved = resolveDay(dateStr);
-  if (resolved.workoutKey === 'rest' || resolved.workoutKey === 'cardio' || resolved.workoutKey === 'cardio_nocore') return;
+  if (resolved.workoutKey === 'rest' || resolved.workoutKey === 'cardio' || resolved.workoutKey === 'cardio_nocore' || resolved.workoutKey === 'active_rest') return;
 
   const tomorrow = addDays(dateStr, 1);
   const tomorrowResolved = resolveDay(tomorrow);
@@ -1265,7 +1144,7 @@ function moveToTomorrow(dateStr) {
     shifts.push({ date: nextDate, workout: currentWorkout });
 
     // Stop if next day is rest or active rest — that absorbs the shift
-    if (nextWorkout === 'rest' || nextWorkout === 'cardio' || nextWorkout === 'cardio_nocore') {
+    if (nextWorkout === 'rest' || nextWorkout === 'cardio' || nextWorkout === 'cardio_nocore' || nextWorkout === 'active_rest') {
       break;
     }
 
@@ -1303,6 +1182,11 @@ function closeShiftModal() {
 
 function confirmShift(dateStr, shifts, weekMonday) {
   closeShiftModal();
+
+  // Store original workout key for reference
+  const resolved = resolveDay(dateStr);
+  if (!state.shiftedFromWorkout) state.shiftedFromWorkout = {};
+  state.shiftedFromWorkout[dateStr] = resolved.workoutKey;
 
   // Apply: today becomes rest
   state.dayOverrides[dateStr] = 'rest';
