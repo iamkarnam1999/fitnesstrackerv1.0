@@ -632,10 +632,11 @@ const CORE_EX = (pfx) => [
 
 const WORKOUT_DEFS = {
   upper:{name:'Upper Body — All Groups · Core', exercises:[
-    {id:'u_bench',    name:'Barbell Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_incline',  name:'Incline Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
     {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_lateral',  name:'Cable Lateral Raise',    type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'u_cablerow', name:'Cable Row',              type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_lat',      name:'Lat Pulldown',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_machrow',  name:'Machine Rows',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt'},
     {id:'u_ezcurl',   name:'EZ Bar Curl',            type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
     {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
