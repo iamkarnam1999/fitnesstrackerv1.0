@@ -617,13 +617,13 @@ const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Sun',label:'UPPER + Core',     type:'workout', workoutKey:'upper'},
-  1:{name:'Mon',label:'QUAD',             type:'workout', workoutKey:'legs_quad_nocore'},
-  2:{name:'Tue',label:'PUSH + Core',      type:'workout', workoutKey:'push'},
-  3:{name:'Wed',label:'PULL',             type:'workout', workoutKey:'pull'},
-  4:{name:'Thu',label:'HAM + Core',       type:'workout', workoutKey:'legs_ham'},
-  5:{name:'Fri',label:'Active Rest',      type:'workout', workoutKey:'active_rest'},
-  6:{name:'Sat',label:'REST',             type:'rest',    workoutKey:'rest'}
+  0:{name:'Mon',label:'PUSH + Core',     type:'workout', workoutKey:'push'},
+  1:{name:'Tue',label:'PULL',             type:'workout', workoutKey:'pull'},
+  2:{name:'Wed',label:'HAM + Core',      type:'workout', workoutKey:'legs_ham'},
+  3:{name:'Thu',label:'Upper',             type:'workout', workoutKey:'upper'},
+  4:{name:'Fri',label:'QUAD + Core',       type:'workout', workoutKey:'legs_quad_nocore'},
+  5:{name:'Sat',label:'Active Rest',      type:'workout', workoutKey:'active_rest'},
+  6:{name:'Sun',label:'REST',             type:'rest',    workoutKey:'rest'}
 };
 
 const CORE_EX = (pfx) => [
