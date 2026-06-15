@@ -301,7 +301,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <header>
-  <div class="logo">COACH<span>Sun–Thu Training · Fri Active Rest · Sat Off</span></div>
+  <div class="logo">COACH<span>Mon–Fri Training · Sat Rest · Sun Active Rest</span></div>
   <div class="header-right">
     <div class="today-badge" id="todayBadge"></div>
     <button class="hard-reset-btn" onclick="openResetModal()">🔴 Hard Reset</button>
@@ -617,13 +617,13 @@ const TARGETS = { cals: 1610, protein: 144, carbs: 163 };
 
 // Base schedule (DOW → workout type) — UPDATED Mar 20 2026
 const BASE_SCHEDULE = {
-  0:{name:'Mon',label:'PUSH + Core',     type:'workout', workoutKey:'push'},
-  1:{name:'Tue',label:'PULL',             type:'workout', workoutKey:'pull'},
-  2:{name:'Wed',label:'HAM + Core',      type:'workout', workoutKey:'legs_ham'},
-  3:{name:'Thu',label:'Upper',             type:'workout', workoutKey:'upper'},
-  4:{name:'Fri',label:'QUAD + Core',       type:'workout', workoutKey:'legs_quad_nocore'},
-  5:{name:'Sat',label:'Active Rest',      type:'workout', workoutKey:'active_rest'},
-  6:{name:'Sun',label:'REST',             type:'rest',    workoutKey:'rest'}
+  0:{name:'Sun',label:'Active Rest',      type:'workout', workoutKey:'active_rest'},
+  1:{name:'Mon',label:'PUSH + Core',      type:'workout', workoutKey:'push'},
+  2:{name:'Tue',label:'PULL',             type:'workout', workoutKey:'pull'},
+  3:{name:'Wed',label:'HAM + Core',       type:'workout', workoutKey:'legs_ham'},
+  4:{name:'Thu',label:'UPPER',            type:'workout', workoutKey:'upper_nocore'},
+  5:{name:'Fri',label:'QUAD + Core',      type:'workout', workoutKey:'legs_quad'},
+  6:{name:'Sat',label:'REST',             type:'rest',    workoutKey:'rest'}
 };
 
 const CORE_EX = (pfx) => [
@@ -631,6 +631,42 @@ const CORE_EX = (pfx) => [
 ];
 
 const WORKOUT_DEFS = {
+  upper:{name:'Upper Body — All Groups · Core', exercises:[
+    {id:'u_incline',  name:'Incline Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_lat',      name:'Lat Pulldown',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_machrow',  name:'Machine Rows',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt'},
+    {id:'u_ezcurl',   name:'EZ Bar Curl',            type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
+    {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
+    ...CORE_EX('u')
+  ]},
+  upper_nocore:{name:'Upper Body — All Groups', exercises:[
+    {id:'u_incline',  name:'Incline Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
+    {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_lat',      name:'Lat Pulldown',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_machrow',  name:'Machine Rows',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt'},
+    {id:'u_ezcurl',   name:'EZ Bar Curl',            type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
+    {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
+  ]},
+  legs_quad_nocore:{name:'Lower Body — Quad Focus', exercises:[
+    {id:'q_ext',    name:'Leg Extensions',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_squat',  name:'Smith Machine Squats',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_press',  name:'Leg Press (quad focus)',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_lunges', name:'Walking DB Lunges',        type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
+    {id:'q_calf',   name:'Calf Raise Machine',       type:'isolation', sets:3, reps:[12,13,15]},
+  ]},
+  legs_quad:{name:'Lower Body — Quad Focus · Core', exercises:[
+    {id:'q_ext',    name:'Leg Extensions',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_squat',  name:'Smith Machine Squats',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_press',  name:'Leg Press (quad focus)',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
+    {id:'q_lunges', name:'Walking DB Lunges',        type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
+    {id:'q_calf',   name:'Calf Raise Machine',       type:'isolation', sets:3, reps:[12,13,15]},
+    ...CORE_EX('q')
+  ]},
   push:{name:'Push — Chest · Shoulders · Triceps · Core', exercises:[
     {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
     {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
@@ -656,24 +692,6 @@ const WORKOUT_DEFS = {
     {id:'h_adduct',  name:'Machine Adductors',      type:'isolation', sets:3, reps:[12,13,15]},
     {id:'h_calf',    name:'Calf Raise Machine',     type:'isolation', sets:3, reps:[12,13,15]},
     ...CORE_EX('h')
-  ]},
-  upper:{name:'Upper Body — All Groups · Core', exercises:[
-    {id:'u_incline',  name:'Incline Bench Press',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[12,13,15]},
-    {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_lat',      name:'Lat Pulldown',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_machrow',  name:'Machine Rows',           type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[12,13,15], note:'Rear delt'},
-    {id:'u_ezcurl',   name:'EZ Bar Curl',            type:'compound',  sets:3, reps:[10,10,12], backoff:[12,12,15]},
-    {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[12,13,15]},
-    ...CORE_EX('u')
-  ]},
-  legs_quad_nocore:{name:'Lower Body — Quad Focus', exercises:[
-    {id:'q_ext',    name:'Leg Extensions',          type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_squat',  name:'Smith Machine Squats',    type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_press',  name:'Leg Press (quad focus)',   type:'compound',  sets:3, reps:[8,10,12], backoff:[10,12,15]},
-    {id:'q_lunges', name:'Walking DB Lunges',        type:'isolation', sets:3, reps:[10,12,15], note:'steps per leg'},
-    {id:'q_calf',   name:'Calf Raise Machine',       type:'isolation', sets:3, reps:[12,13,15]},
   ]},
   active_rest:{name:'Active Rest — Light Movement Only', exercises:[
     {id:'ar_walk', name:'🚶 Walk, Stretch, Mobility', type:'cardio', sets:1, reps:[null], note:'No lifting. Light movement only.'},
@@ -825,9 +843,11 @@ function renderWeekGrid() {
   const oldNav = document.getElementById('weekNav');
   if (oldNav) oldNav.remove();
 
-  // Start from Sunday of target week
+  // Start from Monday of target week
   const d = new Date();
-  d.setDate(d.getDate() - d.getDay() + (weekOffset * 7));
+  const currentDay = d.getDay();
+  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
+  d.setDate(d.getDate() + diffToMon + (weekOffset * 7));
 
   const weekStartDate = localDateStr(d);
 
@@ -899,10 +919,12 @@ function sessKey(dateStr, workoutKey) { return `${dateStr}_${workoutKey}`; }
 
 function getDateForDow(dow) {
   const d = new Date();
-  // Go to Sunday of current week
-  d.setDate(d.getDate() - d.getDay() + (weekOffset * 7));
-  // Add days from Sunday to reach desired dow
-  d.setDate(d.getDate() + dow);
+  const currentDay = d.getDay();
+  const diffToMon = currentDay === 0 ? -6 : 1 - currentDay;
+  d.setDate(d.getDate() + diffToMon + (weekOffset * 7));
+  // d is now Monday of target week, add days to reach desired dow
+  const daysFromMon = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() + daysFromMon);
   return localDateStr(d);
 }
 
@@ -1096,9 +1118,9 @@ function updateF(dateStr, workoutKey, exId, si, field, val) {
 }
 
 function getWeekMondayFor(dateStr) {
-  // Returns Sunday (week start) for the given date
   const dow = dowOfDate(dateStr);
-  return addDays(dateStr, -dow);
+  const offset = dow === 0 ? -6 : 1 - dow;
+  return addDays(dateStr, offset);
 }
 
 function moveToTomorrow(dateStr) {
