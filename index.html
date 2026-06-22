@@ -792,14 +792,14 @@ function showPage(p, el, bnavId) {
 
 // ─── Cycle bar ────────────────────────────────────────────────────────────
 function renderCycleBar() {
-  const labels = ['Week 1 — 6/8 reps','Week 2 — 8/10 reps','Week 3 — 10/12 reps'];
+  const labels = ['Week 1 — 8/10 reps','Week 2 — 10/12 reps','Week 3 — 12/14 reps'];
   document.getElementById('cycleBar').innerHTML =
     labels.map((l,i) => {
       const w=i+1, c=w<state.weekNum?'done-w':w===state.weekNum?'active-w':'';
       return `<div class="cycle-step ${c}">${l}${w<state.weekNum?' ✓':''}</div>`;
     }).join('') +
     `<button class="btn sm secondary" onclick="advanceWeek()" style="margin-left:auto">Advance Week →</button>`;
-  const info = ['Top: 6 reps · Back-off: 8 reps','Top: 8 reps · Back-off: 10 reps','Top: 10 reps · Back-off: 12 reps'];
+  const info = ['Top: 8 reps · Back-off: 10 reps','Top: 10 reps · Back-off: 12 reps','Top: 12 reps · Back-off: 14 reps'];
   document.getElementById('cycleInfo').textContent =
     `Cycle ${state.cycleNum} · ${info[state.weekNum-1]} · After Week 3: +5 lbs, restart`;
 }
