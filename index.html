@@ -632,7 +632,7 @@ const CORE_EX = (pfx) => [
 
 const WORKOUT_DEFS = {
   push:{name:'Push — Chest · Shoulders · Triceps · Core', exercises:[
-    {id:'p_bench',    name:'Barbell Bench Press',        type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
+    {id:'p_bench',    name:'Pec Deck',        type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'p_incline',  name:'Incline Bench Press',        type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'p_shpress',  name:'DB Shoulder Press',          type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'p_lateral',  name:'Cable Lateral Raises',       type:'isolation', sets:3, reps:[10,12,15]},
@@ -643,7 +643,7 @@ const WORKOUT_DEFS = {
   pull:{name:'Pull — Back · Biceps · Rear Delt', exercises:[
     {id:'pu_lat',      name:'Lat Pulldown',            type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'pu_row',      name:'DB Bent Over Row',        type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'pu_facepull', name:'Rope Face Pull',          type:'isolation', sets:3, reps:[10,12,15], note:'Rear delt + external rotators'},
+    {id:'pu_facepull', name:'Rear Delt Machine',          type:'isolation', sets:3, reps:[10,12,15], note:'Rear delt + external rotators'},
     {id:'pu_incurl',   name:'DB Seated Incline Curl',  type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'pu_hammer',   name:'DB Hammer Curl',          type:'isolation', sets:3, reps:[10,12,15]},
     {id:'pu_preach',   name:'DB Preacher Curl',        type:'isolation', sets:3, reps:[10,12,15]},
@@ -661,9 +661,8 @@ const WORKOUT_DEFS = {
     {id:'u_incline',  name:'Incline Bench Press',    type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[10,12,15]},
     {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'u_lat',      name:'Lat Pulldown',           type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'u_machrow',  name:'Machine Rows',           type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[10,12,15], note:'Rear delt'},
+    {id:'u_cabrow',  name:'Seated Cable Rows',           type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
+    {id:'u_facepull', name:'Rear Delt Machine',         type:'isolation', sets:3, reps:[10,12,15], note:'Rear delt'},
     {id:'u_ezcurl',   name:'EZ Bar Curl',            type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[10,12,15]},
     ...CORE_EX('u')
@@ -672,9 +671,8 @@ const WORKOUT_DEFS = {
     {id:'u_incline',  name:'Incline Bench Press',    type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'u_pecdeck',  name:'Pec Deck',               type:'isolation', sets:3, reps:[10,12,15]},
     {id:'u_shpress',  name:'DB Shoulder Press',      type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'u_lat',      name:'Lat Pulldown',           type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'u_machrow',  name:'Machine Rows',           type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
-    {id:'u_facepull', name:'Rope Face Pull',         type:'isolation', sets:3, reps:[10,12,15], note:'Rear delt'},
+    {id:'u_cabrow',  name:'Seated Cable Rows',           type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
+    {id:'u_facepull', name:'Rear Delt Machine',         type:'isolation', sets:3, reps:[10,12,15], note:'Rear delt'},
     {id:'u_ezcurl',   name:'EZ Bar Curl',            type:'compound',  sets:3, reps:[6,8,10], backoff:[8,10,12]},
     {id:'u_pushdown', name:'Rope Tricep Pushdown',   type:'isolation', sets:3, reps:[10,12,15]},
   ]},
